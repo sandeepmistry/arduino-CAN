@@ -254,13 +254,18 @@ int CANClass::endPacket()
 
   writeRegister(REG_TXBnCTRL(n), 0x08);
 
-  while (readRegister(REG_TXBnCTRL(n)) & 0x09) {
+  while (readRegister(REG_TXBnCTRL(n)) & 0x08) {
+    if (readRegister(REG_TXBnCTRL(n)) & 0x10) {
+      // abort
+      modifyRegister(REG_CANCTRL, 0x10, 0x10);
+    }
+
     yield();
   }
 
   modifyRegister(REG_CANINTF, FLAG_TXnIF(n), 0x00);
 
-  return (readRegister(REG_TXBnCTRL(n)) & 0x50) ? 0 : 1;
+  return (readRegister(REG_TXBnCTRL(n)) & 0x70) ? 0 : 1;
 }
 
 int CANClass::parsePacket()
