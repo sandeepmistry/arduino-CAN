@@ -386,9 +386,13 @@ void CANClass::onReceive(void(*callback)(int))
   pinMode(_irq, INPUT);
 
   if (callback) {
-    attachInterrupt(digitalPinToInterrupt(_irq), CANClass::onIntLow, LOW);
+    SPI.usingInterrupt(digitalPinToInterrupt(_irq));
+    attachInterrupt(digitalPinToInterrupt(_irq), CANClass::onInterrupt, LOW);
   } else {
     detachInterrupt(digitalPinToInterrupt(_irq));
+#ifdef SPI_HAS_NOTUSINGINTERRUPT
+    SPI.notUsingInterrupt(digitalPinToInterrupt(_irq));
+#endif
   }
 }
 
@@ -464,9 +468,13 @@ void CANClass::reset()
   delayMicroseconds(10);
 }
 
-void CANClass::handleIntLow()
+void CANClass::handleInterrupt()
 {
-  while (parsePacket() != 0) {
+  if (readRegister(REG_CANINTF) == 0) {
+    return;
+  }
+
+  while (parsePacket()) {
     _onReceive(available());
   }
 }
@@ -515,9 +523,9 @@ void CANClass::writeRegister(uint8_t address, uint8_t value)
   digitalWrite(_ss, HIGH);
 }
 
-void CANClass::onIntLow()
+void CANClass::onInterrupt()
 {
-  CAN.handleIntLow();
+  CAN.handleInterrupt();
 }
 
 CANClass CAN;
