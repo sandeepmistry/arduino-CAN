@@ -152,7 +152,7 @@ int CANClass::begin(long baudRate, long clockRate)
 
   writeRegister(REG_CNF1, cfg[0]);
   writeRegister(REG_CNF2, cfg[1]);
-  writeRegister(REG_CNF3, cfg[3]);
+  writeRegister(REG_CNF3, cfg[2]);
 
   writeRegister(REG_CANINTE, FLAG_RXnIE(1) | FLAG_RXnIE(0));
   writeRegister(REG_BFPCTRL, 0x00);
