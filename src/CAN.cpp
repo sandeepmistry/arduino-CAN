@@ -100,59 +100,51 @@ int CANClass::begin(long baudRate, long clockRate)
   const struct {
     long clockRate;
     long baudRate;
-    uint8_t cfg[3];
-  } CFG_MAPPER[] = {
-    {  (long)8E6, (long)1000E3, { 0x00, 0xc0, 0x80 } },
-    {  (long)8E6,  (long)500E3, { 0x00, 0xd1, 0x81 } },
-    {  (long)8E6,  (long)250E3, { 0x80, 0xe5, 0x83 } },
-    {  (long)8E6,  (long)200E3, { 0x80, 0xf6, 0x84 } },
-    {  (long)8E6,  (long)125E3, { 0x81, 0xe5, 0x83 } },
-    {  (long)8E6,  (long)100E3, { 0x81, 0xf6, 0x84 } },
-    {  (long)8E6,   (long)80E3, { 0x84, 0xd3, 0x81 } },
-    {  (long)8E6,   (long)50E3, { 0x84, 0xe5, 0x83 } },
-    {  (long)8E6,   (long)40E3, { 0x84, 0xf6, 0x84 } },
-    {  (long)8E6,   (long)20E3, { 0x89, 0xf6, 0x84 } },
-    {  (long)8E6,   (long)10E3, { 0x93, 0xf6, 0x84 } },
-    {  (long)8E6,    (long)5E3, { 0xa7, 0xf6, 0x84 } },
-    { (long)16E6, (long)1000E3, { 0x00, 0xca, 0x81 } },
-    { (long)16E6,  (long)500E3, { 0x40, 0xe5, 0x83 } },
-    { (long)16E6,  (long)250E3, { 0x41, 0xe5, 0x83 } },
-    { (long)16E6,  (long)200E3, { 0x41, 0xf6, 0x84 } },
-    { (long)16E6,  (long)125E3, { 0x43, 0xe5, 0x83 } },
-    { (long)16E6,  (long)100E3, { 0x44, 0xe5, 0x83 } },
-    { (long)16E6,   (long)80E3, { 0x44, 0xf6, 0x84 } },
-    { (long)16E6,   (long)50E3, { 0x47, 0xf6, 0x84 } },
-    { (long)16E6,   (long)40E3, { 0x49, 0xf6, 0x84 } },
-    { (long)16E6,   (long)20E3, { 0x53, 0xe5, 0x84 } },
-    { (long)16E6,   (long)10E3, { 0x67, 0xf6, 0x84 } },
+    uint8_t cnf[3];
+  } CNF_MAPPER[] = {
+    {  (long)8E6, (long)1000E3, { 0x00, 0x80, 0x00 } },
+    {  (long)8E6,  (long)500E3, { 0x00, 0x90, 0x02 } },
+    {  (long)8E6,  (long)250E3, { 0x00, 0xb1, 0x05 } },
+    {  (long)8E6,  (long)200E3, { 0x00, 0xb4, 0x06 } },
+    {  (long)8E6,  (long)125E3, { 0x01, 0xb1, 0x05 } },
+    {  (long)8E6,  (long)100E3, { 0x01, 0xb4, 0x06 } },
+    {  (long)8E6,   (long)80E3, { 0x01, 0xbf, 0x07 } },
+    {  (long)8E6,   (long)50E3, { 0x03, 0xb4, 0x06 } },
+    {  (long)8E6,   (long)40E3, { 0x03, 0xbf, 0x07 } },
+    {  (long)8E6,   (long)20E3, { 0x07, 0xbf, 0x07 } },
+    {  (long)8E6,   (long)10E3, { 0x0f, 0xbf, 0x07 } },
+    {  (long)8E6,    (long)5E3, { 0x1f, 0xbf, 0x07 } },
+
+    { (long)16E6, (long)1000E3, { 0x00, 0xd0, 0x82 } },
+    { (long)16E6,  (long)500E3, { 0x00, 0xf0, 0x86 } },
+    { (long)16E6,  (long)250E3, { 0x41, 0xf1, 0x85 } },
+    { (long)16E6,  (long)200E3, { 0x01, 0xfa, 0x87 } },
+    { (long)16E6,  (long)125E3, { 0x03, 0xf0, 0x86 } },
+    { (long)16E6,  (long)100E3, { 0x03, 0xfa, 0x87 } },
+    { (long)16E6,   (long)80E3, { 0x03, 0xff, 0x87 } },
+    { (long)16E6,   (long)50E3, { 0x07, 0xfa, 0x87 } },
+    { (long)16E6,   (long)40E3, { 0x07, 0xff, 0x87 } },
+    { (long)16E6,   (long)20E3, { 0x0f, 0xff, 0x87 } },
+    { (long)16E6,   (long)10E3, { 0x1f, 0xff, 0x87 } },
     { (long)16E6,    (long)5E3, { 0x3f, 0xff, 0x87 } },
-    { (long)20E6, (long)1000E3, { 0x00, 0xd9, 0x82 } },
-    { (long)20E6,  (long)500E3, { 0x40, 0xe5, 0x83 } },
-    { (long)20E6,  (long)250E3, { 0x41, 0xf6, 0x84 } },
-    { (long)20E6,  (long)200E3, { 0x44, 0xd3, 0x81 } },
-    { (long)20E6,  (long)125E3, { 0x44, 0xe5, 0x83 } },
-    { (long)20E6,  (long)100E3, { 0x44, 0xf6, 0x84 } },
-    { (long)20E6,   (long)80E3, { 0xc4, 0xff, 0x87 } },
-    { (long)20E6,   (long)50E3, { 0x49, 0xf6, 0x84 } },
-    { (long)20E6,   (long)40E3, { 0x18, 0xd3, 0x81 } },
   };
 
-  const uint8_t* cfg = NULL;
+  const uint8_t* cnf = NULL;
 
-  for (unsigned int i = 0; i < (sizeof(CFG_MAPPER) / sizeof(CFG_MAPPER[0])); i++) {
-    if (CFG_MAPPER[i].clockRate == clockRate && CFG_MAPPER[i].baudRate == baudRate) {
-      cfg = CFG_MAPPER[i].cfg;
+  for (unsigned int i = 0; i < (sizeof(CNF_MAPPER) / sizeof(CNF_MAPPER[0])); i++) {
+    if (CNF_MAPPER[i].clockRate == clockRate && CNF_MAPPER[i].baudRate == baudRate) {
+      cnf = CNF_MAPPER[i].cnf;
       break;
     }
   }
 
-  if (cfg == NULL) {
+  if (cnf == NULL) {
     return 0;
   }
 
-  writeRegister(REG_CNF1, cfg[0]);
-  writeRegister(REG_CNF2, cfg[1]);
-  writeRegister(REG_CNF3, cfg[2]);
+  writeRegister(REG_CNF1, cnf[0]);
+  writeRegister(REG_CNF2, cnf[1]);
+  writeRegister(REG_CNF3, cnf[2]);
 
   writeRegister(REG_CANINTE, FLAG_RXnIE(1) | FLAG_RXnIE(0));
   writeRegister(REG_BFPCTRL, 0x00);
