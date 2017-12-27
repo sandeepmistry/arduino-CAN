@@ -14,10 +14,8 @@ Initialize the library with the specified bit rate.
 
 ```arduino
 CAN.begin(bitrate);
-CAN.begin(bitrate, clockRate);
 ```
  * `bitrate` - bit rate in bits per seconds (bps) (`1000E3`, `500E3`, `250E3`, `200E3`, `125E3`, `100E3`, `80E3`, `50E3`, `40E3`, `20E3`, `10E3`, `5E3`)
- * `clockRate` - (optional) clock rate of clock source (`8E6`, `16E6`, `20E6`) connected to MCP2515, defaults to `16 Mhz`
 
 Returns `1` on success, `0` on failure.
 
@@ -43,6 +41,17 @@ CAN.setSPIFrequency(frequency);
  * `frequency` - new SPI frequency to use, defaults to `10E6`
 
 This call is optional and only needs to be used if you need to change the default SPI frequency used. Some logic level converters cannot support high speeds such as 10 MHz, so a lower SPI frequency can be selected with `CAN.setSPIFrequency(frequency)`.
+
+### Set Clock Frequency
+
+Override the default clock source frequency that is connected to the MCP2515. **Must** be called before `CAN.begin(...)`.
+
+```arduino
+CAN.setClockFrequency(clockFrequency);
+```
+ * `clockFrequency` - new clock frequency to use (`8E6`, `16E6`) connected to MCP2515, defaults to `16 Mhz`
+
+This call is optional and only needs to be used if you need to change the clock source frequency connected to the MCP2515. Most shields have a 16 MHz clock source on board, some breakout boards have a 8 MHz source.
 
 ### End
 

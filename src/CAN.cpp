@@ -50,6 +50,7 @@ CANClass::CANClass() :
   _spiSettings(10E6, MSBFIRST, SPI_MODE0),
   _ss(CAN_DEFAULT_SS_PIN),
   _irq(CAN_DEFAULT_INT_PIN),
+  _clockFrequency(CAN_DEFAULT_CLOCK_FREQUENCY),
   _onReceive(NULL),
 
   _packetBegun(false),
@@ -70,7 +71,7 @@ CANClass::CANClass() :
   setTimeout(0);
 }
 
-int CANClass::begin(long baudRate, long clockRate)
+int CANClass::begin(long baudRate)
 {
   _packetBegun = false;
   _txId = -1;
@@ -98,7 +99,7 @@ int CANClass::begin(long baudRate, long clockRate)
   }
 
   const struct {
-    long clockRate;
+    long clockFrequency;
     long baudRate;
     uint8_t cnf[3];
   } CNF_MAPPER[] = {
@@ -132,7 +133,7 @@ int CANClass::begin(long baudRate, long clockRate)
   const uint8_t* cnf = NULL;
 
   for (unsigned int i = 0; i < (sizeof(CNF_MAPPER) / sizeof(CNF_MAPPER[0])); i++) {
-    if (CNF_MAPPER[i].clockRate == clockRate && CNF_MAPPER[i].baudRate == baudRate) {
+    if (CNF_MAPPER[i].clockFrequency == _clockFrequency && CNF_MAPPER[i].baudRate == baudRate) {
       cnf = CNF_MAPPER[i].cnf;
       break;
     }
@@ -432,6 +433,11 @@ void CANClass::setPins(int ss, int irq)
 void CANClass::setSPIFrequency(uint32_t frequency)
 {
   _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
+}
+
+void CANClass::setClockFrequency(long clockFrequency)
+{
+  _clockFrequency = clockFrequency;
 }
 
 void CANClass::dumpRegisters(Stream& out)

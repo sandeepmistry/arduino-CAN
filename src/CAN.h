@@ -7,16 +7,16 @@
 #include <Arduino.h>
 #include <SPI.h>
 
-#define CAN_DEFAULT_CLOCK_RATE 16e6
-#define CAN_DEFAULT_SS_PIN     10
-#define CAN_DEFAULT_INT_PIN    2
+#define CAN_DEFAULT_CLOCK_FREQUENCY 16e6
+#define CAN_DEFAULT_SS_PIN          10
+#define CAN_DEFAULT_INT_PIN         2
 
 class CANClass : public Stream {
 
 public:
   CANClass();
 
-  int begin(long baudRate, long clockRate = CAN_DEFAULT_CLOCK_RATE);
+  int begin(long baudRate);
   void end();
 
   int beginPacket(int id, int dlc = -1, bool rtr = false);
@@ -47,6 +47,7 @@ public:
 
   void setPins(int ss = CAN_DEFAULT_SS_PIN, int irq = CAN_DEFAULT_INT_PIN);
   void setSPIFrequency(uint32_t frequency);
+  void setClockFrequency(long clockFrequency);
 
   void dumpRegisters(Stream& out);
 
@@ -65,6 +66,7 @@ private:
   SPISettings _spiSettings;
   int _ss;
   int _irq;
+  long _clockFrequency;
   void (*_onReceive)(int);
 
   bool _packetBegun;

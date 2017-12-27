@@ -39,6 +39,7 @@ wakeup	KEYWORD2
 
 setPins	KEYWORD2
 setSPIFrequency	KEYWORD2
+setClockFrequency	KEYWORD2
 dumpRegisters	KEYWORD2
 
 #######################################
