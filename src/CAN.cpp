@@ -280,9 +280,9 @@ int CANClass::parsePacket()
 
   _rxExtended = (readRegister(REG_RXBnSIDL(n)) & FLAG_IDE) ? true : false;
 
-  uint32_t idA = (readRegister(REG_RXBnSIDH(n)) << 3) | ((readRegister(REG_RXBnSIDL(n)) >> 5) & 0x07);
+  uint32_t idA = ((readRegister(REG_RXBnSIDH(n)) << 3) & 0xf8) | ((readRegister(REG_RXBnSIDL(n)) >> 5) & 0x07);
   if (_rxExtended) {
-    uint32_t idB = ((uint32_t)(readRegister(REG_RXBnSIDL(n)) & 0x03) << 16) | (readRegister(REG_RXBnEID8(n)) << 8) | readRegister(REG_RXBnEID0(n));
+    uint32_t idB = (((uint32_t)(readRegister(REG_RXBnSIDL(n)) & 0x03) << 16) & 0x30000) | ((readRegister(REG_RXBnEID8(n)) << 8) & 0xff00) | readRegister(REG_RXBnEID0(n));
 
     _rxId = (idA << 18) | idB;
     _rxRtr = (readRegister(REG_RXBnDLC(n)) & FLAG_RTR) ? true : false;
