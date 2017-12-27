@@ -36,7 +36,7 @@ void loop() {
   // send extended packet: id is 29 bits, packet can contain up to 8 bytes of data
   Serial.print("Sending extended packet ... ");
 
-  CAN.beginPacket(0xabcdef);
+  CAN.beginExtendedPacket(0xabcdef);
   CAN.write('w');
   CAN.write('o');
   CAN.write('r');

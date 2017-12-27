@@ -38,10 +38,10 @@ void loop() {
     Serial.print(CAN.packetId(), HEX);
 
     if (CAN.packetRtr()) {
-      Serial.println(" and requested length ");
+      Serial.print(" and requested length ");
       Serial.println(CAN.packetDlc());
     } else {
-      Serial.println(" and length ");
+      Serial.print(" and length ");
       Serial.println(packetSize);
 
       // only print packet data for non-RTR packets
