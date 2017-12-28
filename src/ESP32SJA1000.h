@@ -1,24 +1,21 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#ifndef ARDUINO_ARCH_ESP32
+#ifdef ARDUINO_ARCH_ESP32
 
-#ifndef MCP2515_H
-#define MCP2515_H
-
-#include <SPI.h>
+#ifndef ESP32_SJA1000_H
+#define ESP32_SJA1000_H
 
 #include "CANController.h"
 
-#define MCP2515_DEFAULT_CLOCK_FREQUENCY 16e6
-#define MCP2515_DEFAULT_CS_PIN          10
-#define MCP2515_DEFAULT_INT_PIN         2
+#define DEFAULT_CAN_RX_PIN GPIO_NUM_4
+#define DEFAULT_CAN_TX_PIN GPIO_NUM_5
 
-class MCP2515Class : public CANControllerClass {
+class ESP32SJA1000Class : public CANControllerClass {
 
 public:
-  MCP2515Class();
-  virtual ~MCP2515Class();
+  ESP32SJA1000Class();
+  virtual ~ESP32SJA1000Class();
 
   virtual int begin(long baudRate);
   virtual void end();
@@ -34,9 +31,7 @@ public:
   virtual int sleep();
   virtual int wakeup();
 
-  void setPins(int cs = MCP2515_DEFAULT_CS_PIN, int irq = MCP2515_DEFAULT_INT_PIN);
-  void setSPIFrequency(uint32_t frequency);
-  void setClockFrequency(long clockFrequency);
+  void setPins(int rx, int tx);
 
   void dumpRegisters(Stream& out);
 
@@ -49,16 +44,16 @@ private:
   void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
   void writeRegister(uint8_t address, uint8_t value);
 
-  static void onInterrupt();
+  static void onInterrupt(void* arg);
 
 private:
-  SPISettings _spiSettings;
-  int _csPin;
-  int _intPin;
-  long _clockFrequency;
+  gpio_num_t _rxPin;
+  gpio_num_t _txPin;
+  bool _loopback;
+  intr_handle_t _intrHandle;
 };
 
-extern MCP2515Class CAN;
+extern ESP32SJA1000Class CAN;
 
 #endif
 
