@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#include "CAN.h"
+#include "MCP2515.h"
 
 #define REG_BFPCTRL                0x0c
 #define REG_TXRTSCTRL              0x0d
@@ -46,44 +46,22 @@
 #define REG_RXB0CTRL               0x60
 #define REG_RXB1CTRL               0x70
 
-CANClass::CANClass() :
+MCP2515Class::MCP2515Class() :
+  CANControllerClass(),
   _spiSettings(10E6, MSBFIRST, SPI_MODE0),
-  _ss(CAN_DEFAULT_SS_PIN),
-  _irq(CAN_DEFAULT_INT_PIN),
-  _clockFrequency(CAN_DEFAULT_CLOCK_FREQUENCY),
-  _onReceive(NULL),
-
-  _packetBegun(false),
-  _txId(-1),
-  _txExtended(-1),
-  _txRtr(false),
-  _txDlc(0),
-  _txLength(0),
-
-  _rxId(-1),
-  _rxExtended(false),
-  _rxRtr(false),
-  _rxDlc(0),
-  _rxLength(0),
-  _rxIndex(0)
+  _ss(MCP2515_DEFAULT_SS_PIN),
+  _irq(MCP2515_DEFAULT_INT_PIN),
+  _clockFrequency(MCP2515_DEFAULT_CLOCK_FREQUENCY)
 {
-  // overide Stream timeout value
-  setTimeout(0);
 }
 
-int CANClass::begin(long baudRate)
+MCP2515Class::~MCP2515Class()
 {
-  _packetBegun = false;
-  _txId = -1;
-  _txRtr =false;
-  _txDlc = 0;
-  _txLength = 0;
+}
 
-  _rxId = -1;
-  _rxRtr = false;
-  _rxDlc = 0;
-  _rxLength = 0;
-  _rxIndex = 0;
+int MCP2515Class::begin(long baudRate)
+{
+  CANControllerClass::begin(baudRate);
 
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
@@ -161,64 +139,17 @@ int CANClass::begin(long baudRate)
   return 1;
 }
 
-void CANClass::end()
+void MCP2515Class::end()
 {
   SPI.end();
+
+  CANControllerClass::end();
 }
 
-int CANClass::beginPacket(int id, int dlc, bool rtr)
+int MCP2515Class::endPacket()
 {
-  if (id < 0 || id > 0x7FF) {
+  if (!CANControllerClass::endPacket()) {
     return 0;
-  }
-
-  if (dlc > 8) {
-    return 0;
-  }
-
-  _packetBegun = true;
-  _txId = id;
-  _txExtended = false;
-  _txRtr = rtr;
-  _txDlc = dlc;
-  _txLength = 0;
-
-  memset(_txData, 0x00, sizeof(_txData));
-
-  return 1;
-}
-
-int CANClass::beginExtendedPacket(long id, int dlc, bool rtr)
-{
-  if (id < 0 || id > 0x1FFFFFFF) {
-    return 0;
-  }
-
-  if (dlc > 8) {
-    return 0;
-  }
-
-  _packetBegun = true;
-  _txId = id;
-  _txExtended = true;
-  _txRtr = rtr;
-  _txDlc = dlc;
-  _txLength = 0;
-
-  memset(_txData, 0x00, sizeof(_txData));
-
-  return 1;
-}
-
-int CANClass::endPacket()
-{
-  if (!_packetBegun) {
-    return 0;
-  }
-  _packetBegun = false;
-
-  if (_txDlc >= 0) {
-    _txLength = _txDlc;
   }
 
   int n = 0;
@@ -261,7 +192,7 @@ int CANClass::endPacket()
   return (readRegister(REG_TXBnCTRL(n)) & 0x70) ? 0 : 1;
 }
 
-int CANClass::parsePacket()
+int MCP2515Class::parsePacket()
 {
   int n;
 
@@ -309,83 +240,15 @@ int CANClass::parsePacket()
   return _rxDlc;
 }
 
-long CANClass::packetId()
+void MCP2515Class::onReceive(void(*callback)(int))
 {
-  return _rxId;
-}
-
-bool CANClass::packetExtended()
-{
-  return _rxExtended;
-}
-
-bool CANClass::packetRtr()
-{
-  return _rxRtr;
-}
-
-int CANClass::packetDlc()
-{
-  return _rxDlc;
-}
-
-size_t CANClass::write(uint8_t byte)
-{
-  return write(&byte, sizeof(byte));
-}
-
-size_t CANClass::write(const uint8_t *buffer, size_t size)
-{
-  if (!_packetBegun) {
-    return 0;
-  }
-
-  if (size > (sizeof(_txData) - _txLength)) {
-    size = sizeof(_txData) - _txLength;
-  }
-
-  memcpy(&_txData[_txLength], buffer, size);
-  _txLength += size;
-
-  return size;
-}
-
-int CANClass::available()
-{
-  return (_rxLength - _rxIndex);
-}
-
-int CANClass::read()
-{
-  if (!available()) {
-    return -1;
-  }
-
-  return _rxData[_rxIndex++];
-}
-
-int CANClass::peek()
-{
-  if (!available()) {
-    return -1;
-  }
-
-  return _rxData[_rxIndex];
-}
-
-void CANClass::flush()
-{
-}
-
-void CANClass::onReceive(void(*callback)(int))
-{
-  _onReceive = callback;
+  CANControllerClass::onReceive(callback);
 
   pinMode(_irq, INPUT);
 
   if (callback) {
     SPI.usingInterrupt(digitalPinToInterrupt(_irq));
-    attachInterrupt(digitalPinToInterrupt(_irq), CANClass::onInterrupt, LOW);
+    attachInterrupt(digitalPinToInterrupt(_irq), MCP2515Class::onInterrupt, LOW);
   } else {
     detachInterrupt(digitalPinToInterrupt(_irq));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
@@ -394,7 +257,17 @@ void CANClass::onReceive(void(*callback)(int))
   }
 }
 
-int CANClass::loopback()
+int MCP2515Class::observe()
+{
+  writeRegister(REG_CANCTRL, 0x80);
+  if (readRegister(REG_CANCTRL) != 0x80) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int MCP2515Class::loopback()
 {
   writeRegister(REG_CANCTRL, 0x40);
   if (readRegister(REG_CANCTRL) != 0x40) {
@@ -404,7 +277,7 @@ int CANClass::loopback()
   return 1;
 }
 
-int CANClass::sleep()
+int MCP2515Class::sleep()
 {
   writeRegister(REG_CANCTRL, 0x01);
   if (readRegister(REG_CANCTRL) != 0x01) {
@@ -414,7 +287,7 @@ int CANClass::sleep()
   return 1;
 }
 
-int CANClass::wakeup()
+int MCP2515Class::wakeup()
 {
   writeRegister(REG_CANCTRL, 0x00);
   if (readRegister(REG_CANCTRL) != 0x00) {
@@ -424,23 +297,23 @@ int CANClass::wakeup()
   return 1;
 }
 
-void CANClass::setPins(int ss, int irq)
+void MCP2515Class::setPins(int ss, int irq)
 {
   _ss = ss;
   _irq = irq;
 }
 
-void CANClass::setSPIFrequency(uint32_t frequency)
+void MCP2515Class::setSPIFrequency(uint32_t frequency)
 {
   _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
 }
 
-void CANClass::setClockFrequency(long clockFrequency)
+void MCP2515Class::setClockFrequency(long clockFrequency)
 {
   _clockFrequency = clockFrequency;
 }
 
-void CANClass::dumpRegisters(Stream& out)
+void MCP2515Class::dumpRegisters(Stream& out)
 {
   for (int i = 0; i < 128; i++) {
     byte b = readRegister(i);
@@ -458,7 +331,7 @@ void CANClass::dumpRegisters(Stream& out)
   }
 }
 
-void CANClass::reset()
+void MCP2515Class::reset()
 {
   digitalWrite(_ss, LOW);
 
@@ -471,7 +344,7 @@ void CANClass::reset()
   delayMicroseconds(10);
 }
 
-void CANClass::handleInterrupt()
+void MCP2515Class::handleInterrupt()
 {
   if (readRegister(REG_CANINTF) == 0) {
     return;
@@ -482,7 +355,7 @@ void CANClass::handleInterrupt()
   }
 }
 
-uint8_t CANClass::readRegister(uint8_t address)
+uint8_t MCP2515Class::readRegister(uint8_t address)
 {
   uint8_t value;
 
@@ -499,7 +372,7 @@ uint8_t CANClass::readRegister(uint8_t address)
   return value;
 }
 
-void CANClass::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
+void MCP2515Class::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
 {
   digitalWrite(_ss, LOW);
 
@@ -513,7 +386,7 @@ void CANClass::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
   digitalWrite(_ss, HIGH);
 }
 
-void CANClass::writeRegister(uint8_t address, uint8_t value)
+void MCP2515Class::writeRegister(uint8_t address, uint8_t value)
 {
   digitalWrite(_ss, LOW);
 
@@ -526,10 +399,9 @@ void CANClass::writeRegister(uint8_t address, uint8_t value)
   digitalWrite(_ss, HIGH);
 }
 
-void CANClass::onInterrupt()
+void MCP2515Class::onInterrupt()
 {
   CAN.handleInterrupt();
 }
 
-CANClass CAN;
-
+MCP2515Class CAN;
