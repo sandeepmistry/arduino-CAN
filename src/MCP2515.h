@@ -9,7 +9,7 @@
 #include "CANController.h"
 
 #define MCP2515_DEFAULT_CLOCK_FREQUENCY 16e6
-#define MCP2515_DEFAULT_SS_PIN          10
+#define MCP2515_DEFAULT_CS_PIN          10
 #define MCP2515_DEFAULT_INT_PIN         2
 
 class MCP2515Class : public CANControllerClass {
@@ -32,7 +32,7 @@ public:
   virtual int sleep();
   virtual int wakeup();
 
-  void setPins(int ss = MCP2515_DEFAULT_SS_PIN, int irq = MCP2515_DEFAULT_INT_PIN);
+  void setPins(int cs = MCP2515_DEFAULT_CS_PIN, int irq = MCP2515_DEFAULT_INT_PIN);
   void setSPIFrequency(uint32_t frequency);
   void setClockFrequency(long clockFrequency);
 
@@ -51,8 +51,8 @@ private:
 
 private:
   SPISettings _spiSettings;
-  int _ss;
-  int _irq;
+  int _csPin;
+  int _intPin;
   long _clockFrequency;
 };
 
