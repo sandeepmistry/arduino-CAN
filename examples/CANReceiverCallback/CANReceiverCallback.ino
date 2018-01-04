@@ -1,7 +1,6 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#include <SPI.h>
 #include <CAN.h>
 
 void setup() {
