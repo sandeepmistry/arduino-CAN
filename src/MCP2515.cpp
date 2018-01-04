@@ -418,13 +418,11 @@ void MCP2515Class::dumpRegisters(Stream& out)
 
 void MCP2515Class::reset()
 {
-  digitalWrite(_csPin, LOW);
-
   SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
   SPI.transfer(0xc0);
-  SPI.endTransaction();
-
   digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 
   delayMicroseconds(10);
 }
@@ -444,44 +442,38 @@ uint8_t MCP2515Class::readRegister(uint8_t address)
 {
   uint8_t value;
 
-  digitalWrite(_csPin, LOW);
-
   SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
   SPI.transfer(0x03);
   SPI.transfer(address);
   value = SPI.transfer(0x00);
-  SPI.endTransaction();
-
   digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 
   return value;
 }
 
 void MCP2515Class::modifyRegister(uint8_t address, uint8_t mask, uint8_t value)
 {
-  digitalWrite(_csPin, LOW);
-
   SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
   SPI.transfer(0x05);
   SPI.transfer(address);
   SPI.transfer(mask);
   SPI.transfer(value);
-  SPI.endTransaction();
-
   digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 }
 
 void MCP2515Class::writeRegister(uint8_t address, uint8_t value)
 {
-  digitalWrite(_csPin, LOW);
-
   SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
   SPI.transfer(0x02);
   SPI.transfer(address);
   SPI.transfer(value);
-  SPI.endTransaction();
-
   digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 }
 
 void MCP2515Class::onInterrupt()
