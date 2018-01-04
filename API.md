@@ -220,6 +220,33 @@ Returns the next byte in the packet or `-1` if no bytes are available.
 
 **Note:** Other Arduino [`Stream` API's](https://www.arduino.cc/en/Reference/Stream) can also be used to read data from the packet
 
+### Filtering
+
+Filter packets that meet the desired criteria.
+
+```
+CAN.filter(id);
+CAN.filter(id, mask);
+
+CAN.filterExtended(id);
+CAN.filterExtended(id, mask);
+```
+
+ * `id` - 11-bit id (standard packet) or 29-bit packet id (extended packet)
+ * `mask` - (optional) 11-bit mask (standard packet) or 29-bit mask (extended packet), defaults to `0x7ff` or `0x1fffffff` (extended)
+
+Only packets that meet the following criteria are acknowleged and received, other packets are ignored:
+
+```
+if ((packetId & mask) == id) {
+  // acknowleged and received
+} else {
+  // ignored
+}
+```
+
+Returns `1` on success, `0` on failure.
+
 ## Other modes
 
 ### Loopback mode

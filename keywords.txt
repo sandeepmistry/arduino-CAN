@@ -33,6 +33,8 @@ peek	KEYWORD2
 flush	KEYWORD2
 
 onReceive	KEYWORD2
+filter	KEYWORD2
+filterExtended	KEYWORD2
 loopback	KEYWORD2
 sleep	KEYWORD2
 wakeup	KEYWORD2

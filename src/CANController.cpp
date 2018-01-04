@@ -185,6 +185,16 @@ void CANControllerClass::onReceive(void(*callback)(int))
   _onReceive = callback;
 }
 
+int CANControllerClass::filter(int /*id*/, int /*mask*/)
+{
+  return 0;
+}
+
+int CANControllerClass::filterExtended(long /*id*/, long /*mask*/)
+{
+  return 0;
+}
+
 int CANControllerClass::observe()
 {
   return 0;

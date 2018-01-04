@@ -29,6 +29,11 @@ public:
 
   virtual void onReceive(void(*callback)(int));
 
+  using CANControllerClass::filter;
+  virtual int filter(int id, int mask);
+  using CANControllerClass::filterExtended;
+  virtual int filterExtended(long id, long mask);
+
   virtual int observe();
   virtual int loopback();
   virtual int sleep();

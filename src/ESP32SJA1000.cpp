@@ -155,7 +155,8 @@ int ESP32SJA1000Class::begin(long baudRate)
   readRegister(REG_IR);
 
   // normal mode
-  modifyRegister(REG_MOD, 0x1f, 0x00);
+  modifyRegister(REG_MOD, 0x08, 0x08);
+  modifyRegister(REG_MOD, 0x17, 0x00);
 
   return 1;
 }
@@ -283,10 +284,54 @@ void ESP32SJA1000Class::onReceive(void(*callback)(int))
   }
 }
 
+int ESP32SJA1000Class::filter(int id, int mask)
+{
+  id &= 0x7ff;
+  mask = ~(mask & 0x7ff);
+
+  modifyRegister(REG_MOD, 0x17, 0x01); // reset
+
+  writeRegister(REG_ACRn(0), id >> 3);
+  writeRegister(REG_ACRn(1), id << 5);
+  writeRegister(REG_ACRn(2), 0x00);
+  writeRegister(REG_ACRn(3), 0x00);
+
+  writeRegister(REG_AMRn(0), mask >> 3);
+  writeRegister(REG_AMRn(1), (mask << 5) | 0x1f);
+  writeRegister(REG_AMRn(2), 0xff);
+  writeRegister(REG_AMRn(3), 0xff);
+
+  modifyRegister(REG_MOD, 0x17, 0x00); // normal
+
+  return 1;
+}
+
+int ESP32SJA1000Class::filterExtended(long id, long mask)
+{
+  id &= 0x1FFFFFFF;
+  mask &= ~(mask & 0x1FFFFFFF);
+
+  modifyRegister(REG_MOD, 0x17, 0x01); // reset
+
+  writeRegister(REG_ACRn(0), id >> 21);
+  writeRegister(REG_ACRn(1), id >> 13);
+  writeRegister(REG_ACRn(2), id >> 5);
+  writeRegister(REG_ACRn(3), id << 5);
+
+  writeRegister(REG_AMRn(0), mask >> 21);
+  writeRegister(REG_AMRn(1), mask >> 13);
+  writeRegister(REG_AMRn(2), mask >> 5);
+  writeRegister(REG_AMRn(3), (mask << 5) | 0x1f);
+
+  modifyRegister(REG_MOD, 0x17, 0x00); // normal
+
+  return 1;
+}
+
 int ESP32SJA1000Class::observe()
 {
-  modifyRegister(REG_MOD, 0x1f, 0x01); // reset
-  modifyRegister(REG_MOD, 0x1f, 0x02); // observe
+  modifyRegister(REG_MOD, 0x17, 0x01); // reset
+  modifyRegister(REG_MOD, 0x17, 0x02); // observe
 
   return 1;
 }
@@ -295,8 +340,8 @@ int ESP32SJA1000Class::loopback()
 {
   _loopback = true;
 
-  modifyRegister(REG_MOD, 0x1f, 0x01); // reset
-  modifyRegister(REG_MOD, 0x1f, 0x04); // self test mode
+  modifyRegister(REG_MOD, 0x17, 0x01); // reset
+  modifyRegister(REG_MOD, 0x17, 0x04); // self test mode
 
   return 1;
 }

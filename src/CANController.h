@@ -34,6 +34,11 @@ public:
 
   virtual void onReceive(void(*callback)(int));
 
+  virtual int filter(int id) { return filter(id, 0x7ff); }
+  virtual int filter(int id, int mask);
+  virtual int filterExtended(long id) { return filterExtended(id, 0x1fffffff); }
+  virtual int filterExtended(long id, long mask);
+
   virtual int observe();
   virtual int loopback();
   virtual int sleep();
