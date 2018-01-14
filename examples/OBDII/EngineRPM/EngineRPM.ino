@@ -8,7 +8,7 @@ const bool useStandardAddressing = true;
 void setup() {
   Serial.begin(9600);
 
-  Serial.println("CAN OBD-II supported pids");
+  Serial.println("CAN OBD-II engine RPM");
 
   // start the CAN bus at 500 kbps
   if (!CAN.begin(500E3)) {
@@ -36,8 +36,9 @@ void loop() {
 
   // wait for response
   while (CAN.parsePacket() == 0 ||
-         CAN.read() != 0x41 ||                       // correct mode
-         CAN.read() != 0x0c);                        // correct PID
+         CAN.read() < 3 ||          // correct length
+         CAN.read() != 0x41 ||      // correct mode
+         CAN.read() != 0x0c);       // correct PID
 
   float rpm = ((CAN.read() * 256.0) + CAN.read()) / 4.0;
 

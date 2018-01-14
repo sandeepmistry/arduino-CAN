@@ -47,26 +47,28 @@ void loop() {
     Serial.write((char)CAN.read());
   }
 
-  // send the request for the remaining bytes
-  if (useStandardAddressing) {
-    CAN.beginPacket(0x7e0, 8);
-  } else {
-    CAN.beginExtendedPacket(0x18db10f1, 8); // TODO - verify this
-  }
-  CAN.write(0x30);
-  CAN.endPacket();
-
-  // read in remaining bytes
+  // read in remaining chunks
   for (int i = 0; i < 2; i++) {
+    // send the request for the next chunk
+    if (useStandardAddressing) {
+      CAN.beginPacket(0x7e0, 8);
+    } else {
+      CAN.beginExtendedPacket(0x18db33f1, 8);
+    }
+    CAN.write(0x30);
+    CAN.endPacket();
+
     // wait for response
-    while (CAN.parsePacket() == 0 ||                 // wait for response
-           CAN.read() != 0x21);
+    while (CAN.parsePacket() == 0 ||
+           CAN.read() != (0x21 + i)); // correct sequence number
 
     // print out
     while (CAN.available()) {
       Serial.write((char)CAN.read());
     }
   }
+
+  Serial.println("That's all folks!");
 
   while (1); // all done
 }

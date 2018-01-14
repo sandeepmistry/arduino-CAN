@@ -32,7 +32,7 @@ void loop() {
     }
     CAN.write(0x02); // number of additional bytes
     CAN.write(0x01); // show current data
-    CAN.write(pid); // PID
+    CAN.write(pid);  // PID
     CAN.endPacket();
 
     // wait for response
@@ -65,6 +65,8 @@ void loop() {
       break;
     }
   }
+
+  Serial.println("That's all folks!");
 
   while (1); // all done
 }
