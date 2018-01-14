@@ -1,3 +1,10 @@
+// Copyright (c) Sandeep Mistry. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+//
+//
+// This examples queries the ECU for the car's Vehicle Identification Number (VIN) and
+// prints it out to the serial monitor using Mode 09 and OBD-II PID 0x02
+//
 #include <CAN.h>
 
 // Most cars support 11-bit adddress, others (like Honda),
@@ -16,6 +23,7 @@ void setup() {
     while (1);
   }
 
+  // add filter to only receive the CAN bus ID's we care about
   if (useStandardAddressing) {
     CAN.filter(0x7e8);
   } else {

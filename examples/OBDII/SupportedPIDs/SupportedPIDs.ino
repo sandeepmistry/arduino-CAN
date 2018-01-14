@@ -1,3 +1,13 @@
+// Copyright (c) Sandeep Mistry. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+//
+//
+// This examples queries the ECU for the Mode 01 OBD-II PID's it supports and prints the supported
+// OBD-II PID's to the serial monitor
+//
+// A full list of PID's and their meaning can be found here:
+//   https://en.wikipedia.org/wiki/OBD-II_PIDs#Mode_01
+//
 #include <CAN.h>
 
 // Most cars support 11-bit adddress, others (like Honda),
@@ -16,6 +26,7 @@ void setup() {
     while (1);
   }
 
+  // add filter to only receive the CAN bus ID's we care about
   if (useStandardAddressing) {
     CAN.filter(0x7e8);
   } else {
