@@ -10,13 +10,13 @@
 
 #include "CANController.h"
 
+#define MCP2515_DEFAULT_CLOCK_FREQUENCY 16e6
+
 #if defined(ARDUINO_ARCH_SAMD) && defined(USB_VID) && (USB_VID == 0x2341) && !defined(ARDUINO_SAMD_ZERO)
 // Arduino MKR board: MKR CAN shield CS is pin 3, INT is pin 7
-#define MCP2515_DEFAULT_CLOCK_FREQUENCY 16e6
 #define MCP2515_DEFAULT_CS_PIN          3
 #define MCP2515_DEFAULT_INT_PIN         7
 #else
-#define MCP2515_DEFAULT_CLOCK_FREQUENCY 16e6
 #define MCP2515_DEFAULT_CS_PIN          10
 #define MCP2515_DEFAULT_INT_PIN         2
 #endif
