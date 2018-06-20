@@ -4,12 +4,16 @@ env:
     - IDE_VERSION=1.8.5
   matrix:
     - BOARD="arduino:avr:uno"
+    - BOARD="arduino:samd:mkrzero"
     - BOARD="espressif:esp32:esp32"
 before_install:
   - wget http://downloads.arduino.cc/arduino-$IDE_VERSION-linux64.tar.xz
   - tar xf arduino-$IDE_VERSION-linux64.tar.xz
   - mv arduino-$IDE_VERSION $HOME/arduino-ide
   - export PATH=$PATH:$HOME/arduino-ide
+  - if [[ "$BOARD" =~ "arduino:samd:" ]]; then
+      arduino --install-boards arduino:samd;
+    fi
   - if [[ "$BOARD" =~ "espressif:esp32:" ]]; then
       mkdir -p $HOME/Arduino/hardware/espressif;
       git clone https://github.com/espressif/arduino-esp32.git $HOME/Arduino/hardware/espressif/esp32;
