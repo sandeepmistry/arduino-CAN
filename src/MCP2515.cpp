@@ -187,13 +187,22 @@ int MCP2515Class::endPacket()
 
   writeRegister(REG_TXBnCTRL(n), 0x08);
 
+  bool aborted = false;
+
   while (readRegister(REG_TXBnCTRL(n)) & 0x08) {
     if (readRegister(REG_TXBnCTRL(n)) & 0x10) {
       // abort
+      aborted = true;
+
       modifyRegister(REG_CANCTRL, 0x10, 0x10);
     }
 
     yield();
+  }
+
+  if (aborted) {
+    // clear abort command
+    modifyRegister(REG_CANCTRL, 0x10, 0x00);
   }
 
   modifyRegister(REG_CANINTF, FLAG_TXnIF(n), 0x00);
