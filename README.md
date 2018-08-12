@@ -64,6 +64,8 @@ See [API.md](API.md).
 
 See [examples](examples) folder.
 
+For OBD-II examples, checkout the [arduino-OBD2](https://github.com/sandeepmistry/arduino-OBD2) library's [examples](https://github.com/sandeepmistry/arduino-OBD2/examples).
+
 ## License
 
 This library is [licensed](LICENSE) under the [MIT Licence](http://en.wikipedia.org/wiki/MIT_License).

@@ -22,7 +22,6 @@ before_install:
       popd;
     fi
   - buildExampleSketch() { arduino --verbose-build --verify --board $BOARD $PWD/examples/$1/$1.ino; }
-  - buildExampleOBDIISketch() { arduino --verbose-build --verify --board $BOARD $PWD/examples/OBDII/$1/$1.ino; }
 install:
   - mkdir -p $HOME/Arduino/libraries
   - ln -s $PWD $HOME/Arduino/libraries/CAN
@@ -30,6 +29,3 @@ script:
   - buildExampleSketch CANReceiver
   - buildExampleSketch CANReceiverCallback
   - buildExampleSketch CANSender
-  - buildExampleOBDIISketch EngineRPM
-  - buildExampleOBDIISketch SupportedPIDs
-  - buildExampleOBDIISketch VINReader
