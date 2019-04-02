@@ -111,21 +111,10 @@ int ESP32SJA1000Class::begin(long baudRate)
       modifyRegister(REG_BTR0, 0x3f, 49);
       break;
 
-    case (long)40E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 62);
-      break;
-
-    case (long)20E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 124);
-      break;
-
-    case (long)10E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 249);
-      break;
-
+/*
+   Due to limitations in ESP32 hardware and/or RTOS software, baudrate can't be lower than 50kbps.
+   See https://esp32.com/viewtopic.php?t=2142
+*/
     default:
       return 0;
       break;
@@ -143,7 +132,6 @@ int ESP32SJA1000Class::begin(long baudRate)
   writeRegister(REG_AMRn(1), 0xff);
   writeRegister(REG_AMRn(2), 0xff);
   writeRegister(REG_AMRn(3), 0xff);
-
 
   modifyRegister(REG_OCR, 0x03, 0x02); // normal output mode
   // reset error counters
