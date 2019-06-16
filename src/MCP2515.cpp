@@ -21,10 +21,10 @@
 #define FLAG_RXnIF(n)              (0x01 << n)
 #define FLAG_TXnIF(n)              (0x04 << n)
 
-#define REG_RXFnSIDH(n)            (0x00 + (n * 4))
-#define REG_RXFnSIDL(n)            (0x01 + (n * 4))
-#define REG_RXFnEID8(n)            (0x02 + (n * 4))
-#define REG_RXFnEID0(n)            (0x03 + (n * 4))
+#define REG_RXFnSIDH(n)            ((n) < 3 ? (0x00 + (n) * 4) : (0x10 + ((n) - 3) * 4))
+#define REG_RXFnSIDL(n)            ((n) < 3 ? (0x01 + (n) * 4) : (0x11 + ((n) - 3) * 4))
+#define REG_RXFnEID8(n)            ((n) < 3 ? (0x02 + (n) * 4) : (0x12 + ((n) - 3) * 4))
+#define REG_RXFnEID0(n)            ((n) < 3 ? (0x03 + (n) * 4) : (0x13 + ((n) - 3) * 4))
 
 #define REG_RXMnSIDH(n)            (0x20 + (n * 0x04))
 #define REG_RXMnSIDL(n)            (0x21 + (n * 0x04))
