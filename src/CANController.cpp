@@ -109,7 +109,7 @@ int CANControllerClass::endPacket()
 
 int CANControllerClass::parsePacket()
 {
-  return 0;
+  return -1;
 }
 
 long CANControllerClass::packetId()

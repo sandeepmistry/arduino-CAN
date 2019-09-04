@@ -219,7 +219,7 @@ int ESP32SJA1000Class::parsePacket()
 {
   if ((readRegister(REG_SR) & 0x01) != 0x01) {
     // no packet
-    return 0;
+    return -1;
   }
 
   _rxExtended = (readRegister(REG_SFF) & 0x80) ? true : false;
