@@ -44,6 +44,9 @@ public:
   virtual int sleep();
   virtual int wakeup();
 
+  /// Return the raw RX buffer for more efficient data access in high-performance scenarios.
+  uint8_t* getRxBuf() { return _rxData; }
+
 protected:
   CANControllerClass();
   virtual ~CANControllerClass();
