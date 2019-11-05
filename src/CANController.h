@@ -31,6 +31,10 @@ public:
   virtual int read();
   virtual int peek();
   virtual void flush();
+  virtual size_t readBytes(char *buffer, size_t length); // read chars from stream into buffer
+  virtual size_t readBytes(uint8_t *buffer, size_t length) {
+    return readBytes((char*)buffer, length);
+  }
 
   virtual void onReceive(void(*callback)(int));
 
