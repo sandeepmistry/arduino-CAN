@@ -249,6 +249,15 @@ Returns `1` on success, `0` on failure.
 
 ## Other modes
 
+### Listen-Only mode
+
+Put the CAN controller in Listen-Only mode, this mode provides a means to receive all messages (including messages with errors).
+Listen-Only mode is a silent mode, meaning no messages will be transmitted while in this mode (including error flags or acknowledge signals).
+
+```arduino
+CAN.observe();
+```
+
 ### Loopback mode
 
 Put the CAN controller in loopback mode, any outgoing packets will also be received.
@@ -265,7 +274,7 @@ Put the CAN contoller in sleep mode.
 CAN.sleep();
 ```
 
-Wake up the CAN contoller if it was previously in sleep mode.
+Wake up the CAN contoller, if it was previously in sleep mode. This will put the CAN controller into normal operation mode.
 
 ```arduino
 CAN.wakeup();
