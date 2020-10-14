@@ -17,7 +17,7 @@
 
 #define GCLK_CAN1 GCLK_PCHCTRL_GEN_GCLK1_Val
 #define ADAFRUIT_ZEROCAN_TX_BUFFER_SIZE (1)
-#define ADAFRUIT_ZEROCAN_RX_FILTER_SIZE (14)
+#define ADAFRUIT_ZEROCAN_RX_FILTER_SIZE (1)
 #define ADAFRUIT_ZEROCAN_RX_FIFO_SIZE (8)
 #define ADAFRUIT_ZEROCAN_MAX_MESSAGE_LENGTH (8)
 
@@ -26,6 +26,43 @@
 
 namespace
 {
+// Adapted from ASF3 interrupt_sam_nvic.c:
+
+volatile unsigned long cpu_irq_critical_section_counter = 0;
+volatile unsigned char cpu_irq_prev_interrupt_state     = 0;
+
+void cpu_irq_enter_critical(void) {
+    if(!cpu_irq_critical_section_counter) {
+        if(__get_PRIMASK() == 0) { // IRQ enabled?
+            __disable_irq();   // Disable it
+            __DMB();
+            cpu_irq_prev_interrupt_state = 1;
+        } else {
+            // Make sure the to save the prev state as false
+            cpu_irq_prev_interrupt_state = 0;
+        }
+    }
+
+    cpu_irq_critical_section_counter++;
+}
+
+void cpu_irq_leave_critical(void) {
+    // Check if the user is trying to leave a critical section
+    // when not in a critical section
+    if(cpu_irq_critical_section_counter > 0) {
+        cpu_irq_critical_section_counter--;
+
+        // Only enable global interrupts when the counter
+        // reaches 0 and the state of the global interrupt flag
+        // was enabled when entering critical state */
+        if((!cpu_irq_critical_section_counter) &&
+            cpu_irq_prev_interrupt_state) {
+                __DMB();
+                __enable_irq();
+        }
+    }
+}
+
 // This appears to be a typo (transposition error) in the ASF4 headers
 // It's called the "Extended ID Filter Entry"
 typedef CanMramXifde CanMramXidfe;
@@ -48,8 +85,7 @@ struct _canSAME5x_rx_fifo
 struct _canSAME5x_state
 {
   _canSAME5x_tx_buf tx_buffer[ADAFRUIT_ZEROCAN_TX_BUFFER_SIZE];
-  _canSAME5x_rx_fifo rx0_fifo[ADAFRUIT_ZEROCAN_RX_FIFO_SIZE];
-  _canSAME5x_rx_fifo rx1_fifo[ADAFRUIT_ZEROCAN_RX_FIFO_SIZE];
+  _canSAME5x_rx_fifo rx_fifo[ADAFRUIT_ZEROCAN_RX_FIFO_SIZE];
   CanMramSidfe standard_rx_filter[ADAFRUIT_ZEROCAN_RX_FILTER_SIZE];
   CanMramXifde extended_rx_filter[ADAFRUIT_ZEROCAN_RX_FILTER_SIZE];
 };
@@ -102,6 +138,7 @@ int CANSAME5x::begin(long baudrate) {
   // TODO: Support the CAN0 peripheral, which uses pinmux 8
   _hw = reinterpret_cast<void *>(CAN1);
   _state = reinterpret_cast<void *>(&can_state);
+  _idx = 1;
   memset(state, 0, sizeof(*state));
 
   pinPeripheral(_tx, CAN1_FUNCTION);
@@ -114,13 +151,6 @@ int CANSAME5x::begin(long baudrate) {
   while (!hw->CCCR.bit.INIT) {
   }
   hw->CCCR.bit.CCE = 1;
-
-#if 0
-  // XXX - set loopback and silent modes
-  hw->CCCR.bit.MON = silent;
-  hw->CCCR.bit.TEST = loopback;
-  hw->TEST.bit.LBCK = loopback;
-#endif
 
   // All TX data has an 8 byte payload (max)
   {
@@ -150,17 +180,9 @@ int CANSAME5x::begin(long baudrate) {
   // Set up RX fifo 0
   {
     CAN_RXF0C_Type rxf = {};
-    rxf.bit.F0SA = (uint32_t)state->rx0_fifo;
+    rxf.bit.F0SA = (uint32_t)state->rx_fifo;
     rxf.bit.F0S = ADAFRUIT_ZEROCAN_RX_FIFO_SIZE;
     hw->RXF0C.reg = rxf.reg;
-  }
-
-  // Set up RX fifo 1
-  {
-    CAN_RXF1C_Type rxf = {};
-    rxf.bit.F1SA = (uint32_t)state->rx1_fifo;
-    rxf.bit.F1S = ADAFRUIT_ZEROCAN_RX_FIFO_SIZE;
-    hw->RXF1C.reg = rxf.reg;
   }
 
   // Reject all packets not explicitly requested
@@ -171,6 +193,17 @@ int CANSAME5x::begin(long baudrate) {
     gfc.bit.ANFE = CAN_GFC_ANFE_REJECT_Val;
     hw->GFC.reg = gfc.reg;
   }
+
+  // Initially, receive all standard and extended packets to FIFO 0
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID1 = 0; // ID
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID2 = 0; // mask
+  state->standard_rx_filter[0].SIDFE_0.bit.SFEC = CAN_SIDFE_0_SFEC_STF0M_Val;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFT = CAN_SIDFE_0_SFT_CLASSIC_Val;
+
+  state->extended_rx_filter[0].XIDFE_0.bit.EFID1 = 0; // ID
+  state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_STF0M_Val;
+  state->extended_rx_filter[0].XIDFE_1.bit.EFID2 = 0; // mask
+  state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
 
   // Set up standard RX filters
   {
@@ -197,12 +230,21 @@ int CANSAME5x::begin(long baudrate) {
   while (CAN1->CCCR.bit.INIT) {
   }
 
+  instances[_idx] = this;
+
   return 1;
 }
 
 void CANSAME5x::end()
 {
-  // TODO
+  instances[_idx] = 0;
+  pinMode(_tx, INPUT);
+  pinMode(_rx, INPUT);
+  // reset and disable clock
+  hw->CCCR.bit.INIT = 1;
+  while (!hw->CCCR.bit.INIT) {
+  }
+  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
 }
 
 int CANSAME5x::endPacket()
@@ -248,24 +290,89 @@ int CANSAME5x::endPacket()
 
 int CANSAME5x::parsePacket()
 {
-// TODO
+  cpu_irq_enter_critical();
+  if (!hw->RXF0S.bit.F0FL) {
     return 0;
+    cpu_irq_leave_critical();
+  }
+
+  int index = hw->RXF0S.bit.F0GI;
+  auto &hw_message = state->rx_fifo[index];
+
+  _rxExtended = hw_message.rxf0.bit.XTD;
+  _rxRtr = hw_message.rxf0.bit.RTR;
+  _rxDlc = hw_message.rxf1.bit.DLC;
+
+  if(_rxExtended) {
+    _rxId = hw_message.rxf0.bit.ID;
+  } else {
+    _rxId = hw_message.rxf0.bit.ID >> 18;
+  }
+
+  if (_rxRtr) {
+    _rxLength = 0;
+  } else {
+    _rxLength = _rxDlc;
+    memcpy(_rxData, hw_message.data, _rxLength);
+  }
+
+  _rxIndex = 0;
+
+  hw->RXF0A.bit.F0AI = index;
+
+  cpu_irq_leave_critical();
+
+  return _rxDlc;
 }
 
 void CANSAME5x::onReceive(void(*callback)(int))
 {
   CANControllerClass::onReceive(callback);
-// TODO: finish implementation
+
+  hw->IE.bit.RF0NE = bool(callback);
+}
+
+void CANSAME5x::handleInterrupt() {
+  uint32_t ir = hw->IR.reg;
+  
+  if (ir & CAN_IR_RF0N) {
+    while(parsePacket()) {
+      _onReceive(available());
+    }
+  }
+
+  hw->IR.reg =  ir;
 }
 
 int CANSAME5x::filter(int id, int mask)
 {
+  // accept matching standard messages
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID1 = id;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID2 = mask;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFEC = CAN_SIDFE_0_SFEC_STF0M_Val;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFT = CAN_SIDFE_0_SFT_CLASSIC_Val;
+
+  // reject all extended messages
+  state->extended_rx_filter[0].XIDFE_0.bit.EFID1 = 0; // ID
+  state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_REJECT_Val;
+  state->extended_rx_filter[0].XIDFE_1.bit.EFID2 = 0; // mask
+  state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
 //TODO
 }
 
 int CANSAME5x::filterExtended(long id, long mask)
 {
-//TODO
+  // reject all standard messages
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID1 = 0;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFID2 = 0;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFEC = CAN_SIDFE_0_SFEC_REJECT_Val;
+  state->standard_rx_filter[0].SIDFE_0.bit.SFT = CAN_SIDFE_0_SFT_CLASSIC_Val;
+
+  // reject all extended messages
+  state->extended_rx_filter[0].XIDFE_0.bit.EFID1 = id;
+  state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_REJECT_Val;
+  state->extended_rx_filter[0].XIDFE_1.bit.EFID2 = mask;
+  state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
 }
 
 int CANSAME5x::observe() {
@@ -301,9 +408,39 @@ int CANSAME5x::loopback() {
 }
 
 int CANSAME5x::sleep() {
+  hw->CCCR.bit.CSR = 1;
+  while (!CAN1->CCCR.bit.CSA) {
+  }
+  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1;
   return 1;
 }
 
 int CANSAME5x::wakeup() {
+  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  CAN1->CCCR.bit.INIT = 0;
+  while (CAN1->CCCR.bit.INIT) {
+  }
   return 1;
 }
+void CANSAME5x::onInterrupt(int idx) {
+  CANSAME5x *instance = instances[idx];
+  if(instance) {
+    instance->handleInterrupt();
+  }
+}
+
+__attribute__((externally_visible))
+void CAN0_Handler() {
+  cpu_irq_enter_critical();
+  CANSAME5x::onInterrupt(0);
+  cpu_irq_leave_critical();
+}
+
+__attribute__((externally_visible))
+void CAN1_Handler() {
+  cpu_irq_enter_critical();
+  CANSAME5x::onInterrupt(1);
+  cpu_irq_leave_critical();
+}
+
+CANSAME5x *CANSAME5x::instances[2];

@@ -39,11 +39,16 @@ private:
   void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
   void writeRegister(uint8_t address, uint8_t value);
 
-  static void onInterrupt(void* arg);
-
 private:
   int8_t _tx, _rx;
+  int8_t _idx;
   // intr_handle_t _intrHandle;
   void *_state;
   void *_hw;
+  static CANSAME5x *instances[2];
+
+  static void onInterrupt(int arg);
+
+  friend void CAN0_Handler(void);
+  friend void CAN1_Handler(void);
 };
