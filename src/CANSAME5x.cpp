@@ -221,6 +221,10 @@ int CANSAME5x::begin(long baudrate) {
     hw->XIDFC.reg = dfc.reg;
   }
 
+  // Enable receive IRQ (masked until enabled in NVIC)
+  hw->IE.bit.RF0NE = true;
+  hw->ILE.bit.EINT0 = true;
+
   // Set nominal baud rate
   hw->NBTP.reg = nbtp.reg;
 
@@ -288,12 +292,10 @@ int CANSAME5x::endPacket()
   return 1;
 }
 
-int CANSAME5x::parsePacket()
+int CANSAME5x::_parsePacket()
 {
-  cpu_irq_enter_critical();
   if (!hw->RXF0S.bit.F0FL) {
     return 0;
-    cpu_irq_leave_critical();
   }
 
   int index = hw->RXF0S.bit.F0GI;
@@ -320,25 +322,39 @@ int CANSAME5x::parsePacket()
 
   hw->RXF0A.bit.F0AI = index;
 
-  cpu_irq_leave_critical();
-
   return _rxDlc;
+}
+
+int CANSAME5x::parsePacket() {
+  cpu_irq_enter_critical();
+  int result =_parsePacket();
+  cpu_irq_leave_critical();
+  return result;
 }
 
 void CANSAME5x::onReceive(void(*callback)(int))
 {
   CANControllerClass::onReceive(callback);
 
-  hw->IE.bit.RF0NE = bool(callback);
+  static_assert(CAN0_IRQn + 1 == CAN1_IRQn);
+
+  auto irq = IRQn_Type(CAN0_IRQn + _idx);
+  if(callback) {
+Serial.println("enabling irq");
+    NVIC_EnableIRQ(irq);
+  } else {
+Serial.println("disabling irq");
+    NVIC_DisableIRQ(irq);
+  }
 }
 
 void CANSAME5x::handleInterrupt() {
   uint32_t ir = hw->IR.reg;
   
+// Serial.print("in irq");
+// Serial.println(ir, HEX);
   if (ir & CAN_IR_RF0N) {
-    while(parsePacket()) {
-      _onReceive(available());
-    }
+    while(int i = parsePacket()) _onReceive(i);
   }
 
   hw->IR.reg =  ir;
@@ -370,7 +386,7 @@ int CANSAME5x::filterExtended(long id, long mask)
 
   // reject all extended messages
   state->extended_rx_filter[0].XIDFE_0.bit.EFID1 = id;
-  state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_REJECT_Val;
+  state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_STF0M_Val;
   state->extended_rx_filter[0].XIDFE_1.bit.EFID2 = mask;
   state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
 }
@@ -422,24 +438,28 @@ int CANSAME5x::wakeup() {
   }
   return 1;
 }
-void CANSAME5x::onInterrupt(int idx) {
-  CANSAME5x *instance = instances[idx];
-  if(instance) {
-    instance->handleInterrupt();
+void CANSAME5x::onInterrupt() {
+  for(int i=0; i<2; i++) {
+    CANSAME5x *instance = instances[i];
+    if(instance) {
+      instance->handleInterrupt();
+    }
   }
 }
 
+extern "C"
 __attribute__((externally_visible))
 void CAN0_Handler() {
   cpu_irq_enter_critical();
-  CANSAME5x::onInterrupt(0);
+  CANSAME5x::onInterrupt();
   cpu_irq_leave_critical();
 }
 
+extern "C"
 __attribute__((externally_visible))
 void CAN1_Handler() {
   cpu_irq_enter_critical();
-  CANSAME5x::onInterrupt(1);
+  CANSAME5x::onInterrupt();
   cpu_irq_leave_critical();
 }
 

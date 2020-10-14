@@ -35,9 +35,7 @@ private:
 
   void handleInterrupt();
 
-  uint8_t readRegister(uint8_t address);
-  void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
-  void writeRegister(uint8_t address, uint8_t value);
+  int _parsePacket();
 
 private:
   int8_t _tx, _rx;
@@ -47,7 +45,7 @@ private:
   void *_hw;
   static CANSAME5x *instances[2];
 
-  static void onInterrupt(int arg);
+  static void onInterrupt();
 
   friend void CAN0_Handler(void);
   friend void CAN1_Handler(void);
