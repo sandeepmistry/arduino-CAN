@@ -9,6 +9,11 @@
 
 #include "same51.h"
 
+namespace
+{
+#include "CANSAME5x_port.h"
+}
+
 #define hw (reinterpret_cast<Can *>(this->_hw))
 #define state (reinterpret_cast<_canSAME5x_state *>(this->_state))
 
@@ -16,16 +21,22 @@
 #define DIV_ROUND_UP(a, b) (((a) + (b)-1) / (b))
 
 #define GCLK_CAN1 GCLK_PCHCTRL_GEN_GCLK1_Val
+#define GCLK_CAN0 GCLK_PCHCTRL_GEN_GCLK1_Val
 #define ADAFRUIT_ZEROCAN_TX_BUFFER_SIZE (1)
 #define ADAFRUIT_ZEROCAN_RX_FILTER_SIZE (1)
 #define ADAFRUIT_ZEROCAN_RX_FIFO_SIZE (8)
 #define ADAFRUIT_ZEROCAN_MAX_MESSAGE_LENGTH (8)
 
-#define CAN0_FUNCTION (EPioType(8))
-#define CAN1_FUNCTION (EPioType(7))
-
 namespace
 {
+
+template <class T, std::size_t N>
+constexpr size_t size(const T (&array)[N]) noexcept
+{
+    return N;
+}
+
+
 // Adapted from ASF3 interrupt_sam_nvic.c:
 
 volatile unsigned long cpu_irq_critical_section_counter = 0;
@@ -93,8 +104,7 @@ struct _canSAME5x_state
 // This data must be in the first 64kB of RAM.  The "canram" section
 // receives special support from the linker file in the Feather M4 CAN's
 // board support package.
-// TODO support CAN0 and CAN1 simultaneously (state would be an array of 2)
-__attribute__((section("canram"))) _canSAME5x_state can_state;
+__attribute__((section(".canram"))) _canSAME5x_state can_state[2];
 
 constexpr uint32_t can_frequency = VARIANT_GCLK1_FREQ;
 bool compute_nbtp(uint32_t baudrate, CAN_NBTP_Type &result)
@@ -113,6 +123,24 @@ bool compute_nbtp(uint32_t baudrate, CAN_NBTP_Type &result)
   result.bit.NSJW = DIV_ROUND(clocks_after_sample, divisor * 4);
   return true;
 }
+
+EPioType find_pin(const can_function *table, size_t n, int arduino_pin, int &instance) {
+  if(arduino_pin < 0 || arduino_pin > PINS_COUNT) {
+    return (EPioType)-1;
+  }
+
+  unsigned port = g_APinDescription[arduino_pin].ulPort;
+  unsigned pin = g_APinDescription[arduino_pin].ulPin;
+  for(size_t i = 0; i<n; i++) {
+    if(table[i].port == port && table[i].pin == pin) {
+      if(instance == -1 || table[i].instance == instance) {
+        instance = table[i].instance;
+        return EPioType(table[i].mux);
+      }
+    }
+  }
+}
+
 } // namespace
 
 CANSAME5x::CANSAME5x(uint8_t TX_PIN, uint8_t RX_PIN)
@@ -130,22 +158,33 @@ int CANSAME5x::begin(long baudrate) {
     return 0;
   }
 
+  int instance = -1;
+  EPioType tx_function = find_pin(can_tx, size(can_tx), _tx, instance);
+  EPioType rx_function = find_pin(can_rx, size(can_rx), _rx, instance);
+
+  if(tx_function == EPioType(-1) || rx_function == EPioType(-1) || instance == -1) {
+    return 0;
+  }
+
   CAN_NBTP_Type nbtp;
   if (!compute_nbtp(baudrate, nbtp)) {
     return 0;
   }
 
-  // TODO: Support the CAN0 peripheral, which uses pinmux 8
-  _hw = reinterpret_cast<void *>(CAN1);
-  _state = reinterpret_cast<void *>(&can_state);
-  _idx = 1;
+  _idx = instance;
+  _hw = reinterpret_cast<void *>(_idx == 0 ? CAN0 : CAN1);
+  _state = reinterpret_cast<void *>(&can_state[_idx]);
+
   memset(state, 0, sizeof(*state));
 
-  pinPeripheral(_tx, CAN1_FUNCTION);
-  pinPeripheral(_rx, CAN1_FUNCTION);
+  pinPeripheral(_tx, tx_function);
+  pinPeripheral(_rx, rx_function);
 
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
-
+  if(_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = GCLK_CAN0 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  }
   // reset and allow configuration change
   hw->CCCR.bit.INIT = 1;
   while (!hw->CCCR.bit.INIT) {
@@ -223,7 +262,12 @@ int CANSAME5x::begin(long baudrate) {
 
   // Enable receive IRQ (masked until enabled in NVIC)
   hw->IE.bit.RF0NE = true;
-  hw->ILE.bit.EINT0 = true;
+  if (_idx == 0) {
+    hw->ILE.bit.EINT0 = true;
+  } else {
+    hw->ILE.bit.EINT1 = true;
+  }
+  hw->ILS.bit.RF0NL = _idx;
 
   // Set nominal baud rate
   hw->NBTP.reg = nbtp.reg;
@@ -336,14 +380,10 @@ void CANSAME5x::onReceive(void(*callback)(int))
 {
   CANControllerClass::onReceive(callback);
 
-  static_assert(CAN0_IRQn + 1 == CAN1_IRQn);
-
-  auto irq = IRQn_Type(CAN0_IRQn + _idx);
+  auto irq = _idx == 0 ? CAN0_IRQn : CAN1_IRQn;
   if(callback) {
-Serial.println("enabling irq");
     NVIC_EnableIRQ(irq);
   } else {
-Serial.println("disabling irq");
     NVIC_DisableIRQ(irq);
   }
 }
@@ -351,8 +391,6 @@ Serial.println("disabling irq");
 void CANSAME5x::handleInterrupt() {
   uint32_t ir = hw->IR.reg;
   
-// Serial.print("in irq");
-// Serial.println(ir, HEX);
   if (ir & CAN_IR_RF0N) {
     while(int i = parsePacket()) _onReceive(i);
   }
@@ -373,7 +411,6 @@ int CANSAME5x::filter(int id, int mask)
   state->extended_rx_filter[0].XIDFE_0.bit.EFEC = CAN_XIDFE_0_EFEC_REJECT_Val;
   state->extended_rx_filter[0].XIDFE_1.bit.EFID2 = 0; // mask
   state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
-//TODO
 }
 
 int CANSAME5x::filterExtended(long id, long mask)
@@ -439,7 +476,7 @@ int CANSAME5x::wakeup() {
   return 1;
 }
 void CANSAME5x::onInterrupt() {
-  for(int i=0; i<2; i++) {
+  for(int i=0; i<size(instances); i++) {
     CANSAME5x *instance = instances[i];
     if(instance) {
       instance->handleInterrupt();
