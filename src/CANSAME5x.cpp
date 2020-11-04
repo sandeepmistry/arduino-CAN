@@ -1,6 +1,7 @@
 // Copyright 2020 © Jeff Epler for Adafruit Industries. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#if defined(ADAFRUIT_FEATHER_M4_CAN)
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -501,3 +502,7 @@ void CAN1_Handler() {
 }
 
 CANSAME5x *CANSAME5x::instances[2];
+
+CANSAME5x CAN;
+
+#endif
