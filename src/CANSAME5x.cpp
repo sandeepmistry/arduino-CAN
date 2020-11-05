@@ -140,6 +140,7 @@ EPioType find_pin(const can_function *table, size_t n, int arduino_pin, int &ins
       }
     }
   }
+  return (EPioType)-1;
 }
 
 } // namespace
@@ -196,7 +197,7 @@ int CANSAME5x::begin(long baudrate) {
   {
     CAN_TXESC_Type esc = {};
     esc.bit.TBDS = CAN_TXESC_TBDS_DATA8_Val;
-    CAN1->TXESC.reg = esc.reg;
+    hw->TXESC.reg = esc.reg;
   }
 
   // Set up TX buffer
@@ -205,7 +206,7 @@ int CANSAME5x::begin(long baudrate) {
     bc.bit.TBSA = (uint32_t)state->tx_buffer;
     bc.bit.NDTB = ADAFRUIT_ZEROCAN_TX_BUFFER_SIZE;
     bc.bit.TFQM = 0; // Messages are transmitted in the order submitted
-    CAN1->TXBC.reg = bc.reg;
+    hw->TXBC.reg = bc.reg;
   }
 
   // All RX data has an 8 byte payload (max)
@@ -274,9 +275,9 @@ int CANSAME5x::begin(long baudrate) {
   hw->NBTP.reg = nbtp.reg;
 
   // hardware is ready for use
-  CAN1->CCCR.bit.CCE = 0;
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  hw->CCCR.bit.CCE = 0;
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
 
   instances[_idx] = this;
