@@ -294,7 +294,11 @@ void CANSAME5x::end()
   hw->CCCR.bit.INIT = 1;
   while (!hw->CCCR.bit.INIT) {
   }
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  if(_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = 0;
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = 0;
+  }
 }
 
 int CANSAME5x::endPacket()
@@ -438,9 +442,9 @@ int CANSAME5x::observe() {
 
   hw->CCCR.bit.MON = 1;
 
-  CAN1->CCCR.bit.CCE = 0;
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  hw->CCCR.bit.CCE = 0;
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
   return 1;
 }
@@ -455,25 +459,33 @@ int CANSAME5x::loopback() {
   hw->CCCR.bit.TEST = 1;
   hw->TEST.bit.LBCK = 1;
 
-  CAN1->CCCR.bit.CCE = 0;
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  hw->CCCR.bit.CCE = 0;
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
   return 1;
 }
 
 int CANSAME5x::sleep() {
   hw->CCCR.bit.CSR = 1;
-  while (!CAN1->CCCR.bit.CSA) {
+  while (!hw->CCCR.bit.CSA) {
   }
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1;
+  if(_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = 0;
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = 0;
+  }
   return 1;
 }
 
 int CANSAME5x::wakeup() {
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  if(_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = GCLK_CAN0 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  }
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
   return 1;
 }
