@@ -1,5 +1,6 @@
 // Copyright 2020 © Jeff Epler for Adafruit Industries. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed under the MIT license. See LICENSE file in the project root for full
+// license information.
 
 #include "CANController.h"
 
@@ -16,7 +17,7 @@ public:
 
   int parsePacket() final;
 
-  void onReceive(void(*callback)(int)) final;
+  void onReceive(void (*callback)(int)) final;
 
   using CANControllerClass::filter;
   int filter(int id, int mask) final;
@@ -28,7 +29,7 @@ public:
   int sleep() final;
   int wakeup() final;
 
-  void dumpRegisters(Stream& out);
+  void dumpRegisters(Stream &out);
 
 private:
   void reset();
