@@ -7,7 +7,7 @@
 class CANSAME5x : public CANControllerClass {
 public:
   CANSAME5x();
-  CANSAME5x(uint8_t rx_pin, uint8_t tx_pin);
+  CANSAME5x(uint8_t tx_pin, uint8_t rx_pin);
   ~CANSAME5x() final;
 
   int begin(long baudRate) final;
