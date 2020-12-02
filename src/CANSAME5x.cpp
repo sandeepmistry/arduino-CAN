@@ -1,5 +1,6 @@
 // Copyright 2020 © Jeff Epler for Adafruit Industries. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed under the MIT license. See LICENSE file in the project root for full
+// license information.
 
 #if defined(ADAFRUIT_FEATHER_M4_CAN)
 #include <stdint.h>
@@ -10,8 +11,7 @@
 
 #include "same51.h"
 
-namespace
-{
+namespace {
 #include "CANSAME5x_port.h"
 }
 
@@ -28,51 +28,47 @@ namespace
 #define ADAFRUIT_ZEROCAN_RX_FIFO_SIZE (8)
 #define ADAFRUIT_ZEROCAN_MAX_MESSAGE_LENGTH (8)
 
-namespace
-{
+namespace {
 
 template <class T, std::size_t N>
-constexpr size_t size(const T (&array)[N]) noexcept
-{
-    return N;
+constexpr size_t size(const T (&array)[N]) noexcept {
+  return N;
 }
-
 
 // Adapted from ASF3 interrupt_sam_nvic.c:
 
 volatile unsigned long cpu_irq_critical_section_counter = 0;
-volatile unsigned char cpu_irq_prev_interrupt_state     = 0;
+volatile unsigned char cpu_irq_prev_interrupt_state = 0;
 
 void cpu_irq_enter_critical(void) {
-    if(!cpu_irq_critical_section_counter) {
-        if(__get_PRIMASK() == 0) { // IRQ enabled?
-            __disable_irq();   // Disable it
-            __DMB();
-            cpu_irq_prev_interrupt_state = 1;
-        } else {
-            // Make sure the to save the prev state as false
-            cpu_irq_prev_interrupt_state = 0;
-        }
+  if (!cpu_irq_critical_section_counter) {
+    if (__get_PRIMASK() == 0) { // IRQ enabled?
+      __disable_irq();          // Disable it
+      __DMB();
+      cpu_irq_prev_interrupt_state = 1;
+    } else {
+      // Make sure the to save the prev state as false
+      cpu_irq_prev_interrupt_state = 0;
     }
+  }
 
-    cpu_irq_critical_section_counter++;
+  cpu_irq_critical_section_counter++;
 }
 
 void cpu_irq_leave_critical(void) {
-    // Check if the user is trying to leave a critical section
-    // when not in a critical section
-    if(cpu_irq_critical_section_counter > 0) {
-        cpu_irq_critical_section_counter--;
+  // Check if the user is trying to leave a critical section
+  // when not in a critical section
+  if (cpu_irq_critical_section_counter > 0) {
+    cpu_irq_critical_section_counter--;
 
-        // Only enable global interrupts when the counter
-        // reaches 0 and the state of the global interrupt flag
-        // was enabled when entering critical state */
-        if((!cpu_irq_critical_section_counter) &&
-            cpu_irq_prev_interrupt_state) {
-                __DMB();
-                __enable_irq();
-        }
+    // Only enable global interrupts when the counter
+    // reaches 0 and the state of the global interrupt flag
+    // was enabled when entering critical state */
+    if ((!cpu_irq_critical_section_counter) && cpu_irq_prev_interrupt_state) {
+      __DMB();
+      __enable_irq();
     }
+  }
 }
 
 // This appears to be a typo (transposition error) in the ASF4 headers
@@ -87,15 +83,13 @@ struct _canSAME5x_tx_buf {
   __attribute__((aligned(4))) uint8_t data[8];
 };
 
-struct _canSAME5x_rx_fifo
-{
+struct _canSAME5x_rx_fifo {
   CAN_RXF0E_0_Type rxf0;
   CAN_RXF0E_1_Type rxf1;
   __attribute((aligned(4))) uint8_t data[ADAFRUIT_ZEROCAN_MAX_MESSAGE_LENGTH];
 } can_rx_fifo_t;
 
-struct _canSAME5x_state
-{
+struct _canSAME5x_state {
   _canSAME5x_tx_buf tx_buffer[ADAFRUIT_ZEROCAN_TX_BUFFER_SIZE];
   _canSAME5x_rx_fifo rx_fifo[ADAFRUIT_ZEROCAN_RX_FIFO_SIZE];
   CanMramSidfe standard_rx_filter[ADAFRUIT_ZEROCAN_RX_FILTER_SIZE];
@@ -108,8 +102,7 @@ struct _canSAME5x_state
 __attribute__((section(".canram"))) _canSAME5x_state can_state[2];
 
 constexpr uint32_t can_frequency = VARIANT_GCLK1_FREQ;
-bool compute_nbtp(uint32_t baudrate, CAN_NBTP_Type &result)
-{
+bool compute_nbtp(uint32_t baudrate, CAN_NBTP_Type &result) {
   uint32_t clocks_per_bit = DIV_ROUND(can_frequency, baudrate);
   uint32_t clocks_to_sample = DIV_ROUND(clocks_per_bit * 7, 8);
   uint32_t clocks_after_sample = clocks_per_bit - clocks_to_sample;
@@ -125,16 +118,19 @@ bool compute_nbtp(uint32_t baudrate, CAN_NBTP_Type &result)
   return true;
 }
 
-EPioType find_pin(const can_function *table, size_t n, int arduino_pin, int &instance) {
-  if(arduino_pin < 0 || arduino_pin > PINS_COUNT) {
+EPioType find_pin(const can_function *table, size_t n, int arduino_pin,
+                  int &instance) {
+  if (arduino_pin < 0 || arduino_pin > PINS_COUNT) {
     return (EPioType)-1;
   }
 
   unsigned port = g_APinDescription[arduino_pin].ulPort;
   unsigned pin = g_APinDescription[arduino_pin].ulPin;
-  for(size_t i = 0; i<n; i++) {
-    if(table[i].port == port && table[i].pin == pin) {
-      if(instance == -1 || table[i].instance == instance) {
+  for (size_t i = 0; i < n; i++) {
+    if (table[i].port == port && table[i].pin == pin) {
+      if (instance == -1 || table[i].instance == instance) {
+        Serial.print("found #");
+        Serial.println(i);
         instance = table[i].instance;
         return EPioType(table[i].mux);
       }
@@ -160,11 +156,48 @@ int CANSAME5x::begin(long baudrate) {
     return 0;
   }
 
+  Serial.print("_rx ");
+  Serial.print(_rx);
+  Serial.print(" ulPort=");
+  Serial.print(g_APinDescription[_rx].ulPort);
+  Serial.print(" ulPin=");
+  Serial.println(g_APinDescription[_rx].ulPin);
+
+  Serial.println("rx pin table");
+  for (size_t i = 0; i < size(can_rx); i++) {
+    Serial.print(i);
+    Serial.print(" port=");
+    Serial.print(can_rx[i].port);
+    Serial.print(" pin=");
+    Serial.print(can_rx[i].pin);
+    Serial.print(" instance=");
+    Serial.println(can_rx[i].instance);
+  }
+
+  Serial.print("_tx ");
+  Serial.print(_tx);
+  Serial.print(" ulPort=");
+  Serial.print(g_APinDescription[_tx].ulPort);
+  Serial.print(" ulPin=");
+  Serial.println(g_APinDescription[_tx].ulPin);
+
+  Serial.println("tx pin table");
+  for (size_t i = 0; i < size(can_tx); i++) {
+    Serial.print(i);
+    Serial.print(" port=");
+    Serial.print(can_tx[i].port);
+    Serial.print(" pin=");
+    Serial.print(can_tx[i].pin);
+    Serial.print(" instance=");
+    Serial.println(can_tx[i].instance);
+  }
+
   int instance = -1;
   EPioType tx_function = find_pin(can_tx, size(can_tx), _tx, instance);
   EPioType rx_function = find_pin(can_rx, size(can_rx), _rx, instance);
 
-  if(tx_function == EPioType(-1) || rx_function == EPioType(-1) || instance == -1) {
+  if (tx_function == EPioType(-1) || rx_function == EPioType(-1) ||
+      instance == -1) {
     return 0;
   }
 
@@ -182,7 +215,7 @@ int CANSAME5x::begin(long baudrate) {
   pinPeripheral(_tx, tx_function);
   pinPeripheral(_rx, rx_function);
 
-  if(_idx == 0) {
+  if (_idx == 0) {
     GCLK->PCHCTRL[CAN0_GCLK_ID].reg = GCLK_CAN0 | (1 << GCLK_PCHCTRL_CHEN_Pos);
   } else {
     GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
@@ -285,8 +318,7 @@ int CANSAME5x::begin(long baudrate) {
   return 1;
 }
 
-void CANSAME5x::end()
-{
+void CANSAME5x::end() {
   instances[_idx] = 0;
   pinMode(_tx, INPUT);
   pinMode(_rx, INPUT);
@@ -294,11 +326,14 @@ void CANSAME5x::end()
   hw->CCCR.bit.INIT = 1;
   while (!hw->CCCR.bit.INIT) {
   }
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  if (_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = 0;
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = 0;
+  }
 }
 
-int CANSAME5x::endPacket()
-{
+int CANSAME5x::endPacket() {
   if (!CANControllerClass::endPacket()) {
     return 0;
   }
@@ -338,8 +373,7 @@ int CANSAME5x::endPacket()
   return 1;
 }
 
-int CANSAME5x::_parsePacket()
-{
+int CANSAME5x::_parsePacket() {
   if (!hw->RXF0S.bit.F0FL) {
     return 0;
   }
@@ -351,7 +385,7 @@ int CANSAME5x::_parsePacket()
   _rxRtr = hw_message.rxf0.bit.RTR;
   _rxDlc = hw_message.rxf1.bit.DLC;
 
-  if(_rxExtended) {
+  if (_rxExtended) {
     _rxId = hw_message.rxf0.bit.ID;
   } else {
     _rxId = hw_message.rxf0.bit.ID >> 18;
@@ -373,17 +407,16 @@ int CANSAME5x::_parsePacket()
 
 int CANSAME5x::parsePacket() {
   cpu_irq_enter_critical();
-  int result =_parsePacket();
+  int result = _parsePacket();
   cpu_irq_leave_critical();
   return result;
 }
 
-void CANSAME5x::onReceive(void(*callback)(int))
-{
+void CANSAME5x::onReceive(void (*callback)(int)) {
   CANControllerClass::onReceive(callback);
 
   auto irq = _idx == 0 ? CAN0_IRQn : CAN1_IRQn;
-  if(callback) {
+  if (callback) {
     NVIC_EnableIRQ(irq);
   } else {
     NVIC_DisableIRQ(irq);
@@ -392,16 +425,16 @@ void CANSAME5x::onReceive(void(*callback)(int))
 
 void CANSAME5x::handleInterrupt() {
   uint32_t ir = hw->IR.reg;
-  
+
   if (ir & CAN_IR_RF0N) {
-    while(int i = parsePacket()) _onReceive(i);
+    while (int i = parsePacket())
+      _onReceive(i);
   }
 
-  hw->IR.reg =  ir;
+  hw->IR.reg = ir;
 }
 
-int CANSAME5x::filter(int id, int mask)
-{
+int CANSAME5x::filter(int id, int mask) {
   // accept matching standard messages
   state->standard_rx_filter[0].SIDFE_0.bit.SFID1 = id;
   state->standard_rx_filter[0].SIDFE_0.bit.SFID2 = mask;
@@ -415,8 +448,7 @@ int CANSAME5x::filter(int id, int mask)
   state->extended_rx_filter[0].XIDFE_1.bit.EFT = CAN_XIDFE_1_EFT_CLASSIC_Val;
 }
 
-int CANSAME5x::filterExtended(long id, long mask)
-{
+int CANSAME5x::filterExtended(long id, long mask) {
   // reject all standard messages
   state->standard_rx_filter[0].SIDFE_0.bit.SFID1 = 0;
   state->standard_rx_filter[0].SIDFE_0.bit.SFID2 = 0;
@@ -438,65 +470,72 @@ int CANSAME5x::observe() {
 
   hw->CCCR.bit.MON = 1;
 
-  CAN1->CCCR.bit.CCE = 0;
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  hw->CCCR.bit.CCE = 0;
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
   return 1;
 }
 
-
 int CANSAME5x::loopback() {
   hw->CCCR.bit.INIT = 1;
+  Serial.println("loopback start");
   while (!hw->CCCR.bit.INIT) {
   }
   hw->CCCR.bit.CCE = 1;
 
   hw->CCCR.bit.TEST = 1;
   hw->TEST.bit.LBCK = 1;
+  Serial.println("loopback b");
 
-  CAN1->CCCR.bit.CCE = 0;
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  hw->CCCR.bit.CCE = 0;
+  hw->CCCR.bit.INIT = 0;
+  Serial.println("loopback c");
+  while (hw->CCCR.bit.INIT) {
   }
+  Serial.println("loopback d");
   return 1;
 }
 
 int CANSAME5x::sleep() {
   hw->CCCR.bit.CSR = 1;
-  while (!CAN1->CCCR.bit.CSA) {
+  while (!hw->CCCR.bit.CSA) {
   }
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1;
+  if (_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = 0;
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = 0;
+  }
   return 1;
 }
 
 int CANSAME5x::wakeup() {
-  GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
-  CAN1->CCCR.bit.INIT = 0;
-  while (CAN1->CCCR.bit.INIT) {
+  if (_idx == 0) {
+    GCLK->PCHCTRL[CAN0_GCLK_ID].reg = GCLK_CAN0 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  } else {
+    GCLK->PCHCTRL[CAN1_GCLK_ID].reg = GCLK_CAN1 | (1 << GCLK_PCHCTRL_CHEN_Pos);
+  }
+  hw->CCCR.bit.INIT = 0;
+  while (hw->CCCR.bit.INIT) {
   }
   return 1;
 }
 void CANSAME5x::onInterrupt() {
-  for(int i=0; i<size(instances); i++) {
+  for (int i = 0; i < size(instances); i++) {
     CANSAME5x *instance = instances[i];
-    if(instance) {
+    if (instance) {
       instance->handleInterrupt();
     }
   }
 }
 
-extern "C"
-__attribute__((externally_visible))
-void CAN0_Handler() {
+extern "C" __attribute__((externally_visible)) void CAN0_Handler() {
   cpu_irq_enter_critical();
   CANSAME5x::onInterrupt();
   cpu_irq_leave_critical();
 }
 
-extern "C"
-__attribute__((externally_visible))
-void CAN1_Handler() {
+extern "C" __attribute__((externally_visible)) void CAN1_Handler() {
   cpu_irq_enter_critical();
   CANSAME5x::onInterrupt();
   cpu_irq_leave_critical();
