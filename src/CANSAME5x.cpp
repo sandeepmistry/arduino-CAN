@@ -129,8 +129,8 @@ EPioType find_pin(const can_function *table, size_t n, int arduino_pin,
   for (size_t i = 0; i < n; i++) {
     if (table[i].port == port && table[i].pin == pin) {
       if (instance == -1 || table[i].instance == instance) {
-        Serial.print("found #");
-        Serial.println(i);
+        //Serial.print("found #");
+        //Serial.println(i);
         instance = table[i].instance;
         return EPioType(table[i].mux);
       }
@@ -156,6 +156,7 @@ int CANSAME5x::begin(long baudrate) {
     return 0;
   }
 
+  /*
   Serial.print("_rx ");
   Serial.print(_rx);
   Serial.print(" ulPort=");
@@ -191,6 +192,7 @@ int CANSAME5x::begin(long baudrate) {
     Serial.print(" instance=");
     Serial.println(can_tx[i].instance);
   }
+  */
 
   int instance = -1;
   EPioType tx_function = find_pin(can_tx, size(can_tx), _tx, instance);
