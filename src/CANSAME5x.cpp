@@ -347,6 +347,8 @@ int CANSAME5x::endPacket() {
     return 0;
   }
 
+  bus_autorecover();
+
   // TODO wait for TX buffer to free
 
   _canSAME5x_tx_buf &buf = state->tx_buffer[0];
@@ -416,6 +418,7 @@ int CANSAME5x::_parsePacket() {
 
 int CANSAME5x::parsePacket() {
   cpu_irq_enter_critical();
+  bus_autorecover();
   int result = _parsePacket();
   cpu_irq_leave_critical();
   return result;
@@ -525,6 +528,16 @@ int CANSAME5x::wakeup() {
   }
   return 1;
 }
+
+void CANSAME5x::bus_autorecover() {
+  if (hw->PSR.bit.BO) {
+    DEBUG_PRINTLN("bus autorecovery activated");
+    hw->CCCR.bit.INIT = 0;
+    while (hw->CCCR.bit.INIT) {
+    }
+  }
+}
+
 void CANSAME5x::onInterrupt() {
   for (int i = 0; i < size(instances); i++) {
     CANSAME5x *instance = instances[i];

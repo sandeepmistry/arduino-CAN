@@ -32,7 +32,7 @@ public:
   void dumpRegisters(Stream &out);
 
 private:
-  void reset();
+  void bus_autorecover();
 
   void handleInterrupt();
 
