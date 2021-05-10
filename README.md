@@ -35,8 +35,8 @@ Requires an external 3.3V CAN transceiver, such as a [TI SN65HVD230](http://www.
 | :-------------: | :---: |
 | 3V3 | 3V3 |
 | GND | GND |
-| CTX | 5 |
-| CRX | 4 |
+| CTX | GPIO_5 |
+| CRX | GPIO_4 |
 
 `CTX` and `CRX` pins can be changed by using `CAN.setPins(rx, tx)`.
 
