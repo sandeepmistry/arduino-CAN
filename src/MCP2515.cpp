@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#ifndef ARDUINO_ARCH_ESP32
+#if !defined(ARDUINO_ARCH_ESP32) && !defined(ARDUINO_FEATHER_M4_CAN)
 
 #include "MCP2515.h"
 
@@ -265,7 +265,9 @@ void MCP2515Class::onReceive(void(*callback)(int))
   pinMode(_intPin, INPUT);
 
   if (callback) {
+#ifndef ESP8266
     SPI.usingInterrupt(digitalPinToInterrupt(_intPin));
+#endif
     attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, LOW);
   } else {
     detachInterrupt(digitalPinToInterrupt(_intPin));
