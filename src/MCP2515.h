@@ -38,8 +38,21 @@ public:
 
   using CANControllerClass::filter;
   virtual int filter(int id, int mask);
+
+  // mask0 is applied to filter0 and filter1 for RXB0.
+  // mask1 is applied to filter2, filter3, filter4, filter5 for RXB1.
+  // allowRollover controls whether messages that would otherwise overflow RXB0
+  //   should be put in RXB1 instead.
+  //
+  // See the MCP2515 datasheet for more info.
+  boolean setFilterRegisters(
+      uint16_t mask0, uint16_t filter0, uint16_t filter1,
+      uint16_t mask1, uint16_t filter2, uint16_t filter3, uint16_t filter4, uint16_t filter5,
+      bool allowRollover);
+
   using CANControllerClass::filterExtended;
   virtual int filterExtended(long id, long mask);
+  // TODO: add setFilterRegistersExtended().
 
   virtual int observe();
   virtual int loopback();
