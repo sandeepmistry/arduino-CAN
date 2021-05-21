@@ -247,6 +247,20 @@ if ((packetId & mask) == id) {
 
 Returns `1` on success, `0` on failure.
 
+### Advanced Filtering
+
+```
+CAN.multiFilter(ids, count);
+```
+
+ * `ids` - array of 11-bit ids
+ * `count` - count of entries in `ids`
+
+Only packets with an id in `ids` are acknowleged and received, other packets are ignored.
+If `count` is larger than the filters supported by your CAN hardware additional frame ids might be received.
+
+Returns `1` on success, `0` on failure.
+
 ## Other modes
 
 ### Loopback mode
