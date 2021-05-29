@@ -167,6 +167,23 @@ int CANControllerClass::read()
   return _rxData[_rxIndex++];
 }
 
+size_t CANControllerClass::readBytes(char *buffer, size_t length) {
+  int bytesAvailable = available();
+  if (bytesAvailable <= 0) {
+    // No data left to consume.
+    return 0;
+  } 
+  
+  if (bytesAvailable < length) {
+    // Limit to actually available data.
+    length = bytesAvailable;
+  }
+
+  memcpy(buffer, _rxData, length);
+  _rxIndex += length; // Consume the data.
+  return length;
+}
+
 int CANControllerClass::peek()
 {
   if (!available()) {
