@@ -127,7 +127,7 @@ int ESP32SJA1000Class::begin(long baudRate)
     }else {
 
        if (chip.revision >= 2) {
-          modifyRegister(REG_IER, 0x10, 1); // From rev2 used as "divide BRP by 2"
+          modifyRegister(REG_IER, 0x10, 0x10); // From rev2 used as "divide BRP by 2"
        }else {
           return 0;
        }
