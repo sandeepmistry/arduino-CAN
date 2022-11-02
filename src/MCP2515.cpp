@@ -442,7 +442,7 @@ void MCP2515Class::handleInterrupt()
     return;
   }
 
-  while (parsePacket() || _rxId() != -1) {
+  while (parsePacket() || _rxId != -1) {
     _onReceive(available());
   }
 }
