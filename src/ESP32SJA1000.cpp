@@ -164,55 +164,62 @@ void ESP32SJA1000Class::end()
 
 int ESP32SJA1000Class::endPacket()
 {
-  if (!CANControllerClass::endPacket()) {
-    return 0;
-  }
+if (!CANControllerClass::endPacket()) {
+return 0;
+}
+const uint8_t TIMEOUTVALUE = 50;
+uint8_t uiTimeOut = 0;
 
-  // wait for TX buffer to free
-  while ((readRegister(REG_SR) & 0x04) != 0x04) {
-    yield();
-  }
+// wait for TX buffer to free
+while (((readRegister(REG_SR) & 0x04) != 0x04) && (uiTimeOut < TIMEOUTVALUE)) {
+yield();
+uiTimeOut++;
+}
+if(uiTimeOut == TIMEOUTVALUE) return -1; /* get tx buff time out */
+uiTimeOut = 0;
 
-  int dataReg;
+int dataReg;
 
-  if (_txExtended) {
-    writeRegister(REG_EFF, 0x80 | (_txRtr ? 0x40 : 0x00) | (0x0f & _txLength));
-    writeRegister(REG_EFF + 1, _txId >> 21);
-    writeRegister(REG_EFF + 2, _txId >> 13);
-    writeRegister(REG_EFF + 3, _txId >> 5);
-    writeRegister(REG_EFF + 4, _txId << 3);
+if (_txExtended) {
+writeRegister(REG_EFF, 0x80 | (_txRtr ? 0x40 : 0x00) | (0x0f & _txLength));
+writeRegister(REG_EFF + 1, _txId >> 21);
+writeRegister(REG_EFF + 2, _txId >> 13);
+writeRegister(REG_EFF + 3, _txId >> 5);
+writeRegister(REG_EFF + 4, _txId << 3);
 
-    dataReg = REG_EFF + 5;
-  } else {
-    writeRegister(REG_SFF, (_txRtr ? 0x40 : 0x00) | (0x0f & _txLength));
-    writeRegister(REG_SFF + 1, _txId >> 3);
-    writeRegister(REG_SFF + 2, _txId << 5);
+dataReg = REG_EFF + 5;
+} else {
+writeRegister(REG_SFF, (_txRtr ? 0x40 : 0x00) | (0x0f & _txLength));
+writeRegister(REG_SFF + 1, _txId >> 3);
+writeRegister(REG_SFF + 2, _txId << 5);
 
-    dataReg = REG_SFF + 3;
-  }
+dataReg = REG_SFF + 3;
+}
 
-  for (int i = 0; i < _txLength; i++) {
-    writeRegister(dataReg + i, _txData[i]);
-  }
+for (int i = 0; i < _txLength; i++) {
+writeRegister(dataReg + i, _txData[i]);
+}
 
-  if ( _loopback) {
-    // self reception request
-    modifyRegister(REG_CMR, 0x1f, 0x10);
-  } else {
-    // transmit request
-    modifyRegister(REG_CMR, 0x1f, 0x01);
-  }
+if ( _loopback) {
+// self reception request
+modifyRegister(REG_CMR, 0x1f, 0x10);
+} else {
+// transmit request
+modifyRegister(REG_CMR, 0x1f, 0x01);
+}
 
-  // wait for TX complete
-  while ((readRegister(REG_SR) & 0x08) != 0x08) {
-    if (readRegister(REG_ECC) == 0xd9) {
-      modifyRegister(REG_CMR, 0x1f, 0x02); // error, abort
-      return 0;
-    }
-    yield();
-  }
+// wait for TX complete
+while (((readRegister(REG_SR) & 0x08) != 0x08) && (uiTimeOut < TIMEOUTVALUE)) {
+if (readRegister(REG_ECC) == 0xd9) {
+modifyRegister(REG_CMR, 0x1f, 0x02); // error, abort
+return 0;
+}
+yield();
+uiTimeOut++;
+}
+if(uiTimeOut == TIMEOUTVALUE) return -2; /* send msg timeout */
 
-  return 1;
+return 1;
 }
 
 int ESP32SJA1000Class::parsePacket()
