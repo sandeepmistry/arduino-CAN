@@ -20,7 +20,7 @@ void loop() {
   // try to parse packet
   int packetSize = CAN.parsePacket();
 
-  if (packetSize) {
+  if (packetSize || CAN.packetId() != -1) {
     // received a packet
     Serial.print("Received ");
 
