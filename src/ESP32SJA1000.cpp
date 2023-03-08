@@ -304,12 +304,12 @@ int ESP32SJA1000Class::filterExtended(long id, long mask)
   writeRegister(REG_ACRn(0), id >> 21);
   writeRegister(REG_ACRn(1), id >> 13);
   writeRegister(REG_ACRn(2), id >> 5);
-  writeRegister(REG_ACRn(3), id << 5);
+  writeRegister(REG_ACRn(3), id << 3);
 
   writeRegister(REG_AMRn(0), mask >> 21);
   writeRegister(REG_AMRn(1), mask >> 13);
   writeRegister(REG_AMRn(2), mask >> 5);
-  writeRegister(REG_AMRn(3), (mask << 5) | 0x1f);
+  writeRegister(REG_AMRn(3), (mask << 3) | 0x1f);
 
   modifyRegister(REG_MOD, 0x17, 0x00); // normal
 
