@@ -70,58 +70,89 @@ int ESP32SJA1000Class::begin(long baudRate)
   modifyRegister(REG_BTR0, 0xc0, 0x40); // SJW = 1
   modifyRegister(REG_BTR1, 0x70, 0x10); // TSEG2 = 1
 
-  switch (baudRate) {
-    case (long)1000E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x04);
-      modifyRegister(REG_BTR0, 0x3f, 4);
-      break;
+  esp_chip_info_t chip;
+  esp_chip_info(&chip);
 
-    case (long)500E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 4);
-      break;
+  if (baudRate >= 50E3) {
 
-    case (long)250E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 9);
-      break;
+       if (chip.revision >= 2) {
+          modifyRegister(REG_IER, 0x10, 0); // From rev2 used as "divide BRP by 2"
+       }
 
-    case (long)200E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 12);
-      break;
+      switch (baudRate) {
+        case (long)1000E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x04);
+          modifyRegister(REG_BTR0, 0x3f, 4);
+          break;
 
-    case (long)125E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 19);
-      break;
+        case (long)500E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 4);
+          break;
 
-    case (long)100E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 24);
-      break;
+        case (long)250E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 9);
+          break;
 
-    case (long)80E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 30);
-      break;
+        case (long)200E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 12);
+          break;
 
-    case (long)50E3:
-      modifyRegister(REG_BTR1, 0x0f, 0x0c);
-      modifyRegister(REG_BTR0, 0x3f, 49);
-      break;
+        case (long)125E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 19);
+          break;
 
-/*
-   Due to limitations in ESP32 hardware and/or RTOS software, baudrate can't be lower than 50kbps.
-   See https://esp32.com/viewtopic.php?t=2142
-*/
-    default:
-      return 0;
-      break;
+        case (long)100E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 24);
+          break;
+
+        case (long)80E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 30);
+          break;
+
+        case (long)50E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 49);
+          break;
+
+        default:
+          return 0;
+          break;
+      }
+    }else {
+
+       if (chip.revision >= 2) {
+          modifyRegister(REG_IER, 0x10, 0x10); // From rev2 used as "divide BRP by 2"
+       }else {
+          return 0;
+       }
+
+      switch (baudRate) {
+
+        case (long)40E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x0c);
+          modifyRegister(REG_BTR0, 0x3f, 30);
+          break;
+
+        case (long)20E3:
+          modifyRegister(REG_BTR1, 0x0f, 0x4d);
+          modifyRegister(REG_BTR0, 0x3f, 30);
+          break;
+
+        default:
+          return 0;
+          break;
+      }
+
   }
 
   modifyRegister(REG_BTR1, 0x80, 0x80); // SAM = 1
-  writeRegister(REG_IER, 0xff); // enable all interrupts
+  modifyRegister(REG_IER, 0xef, 0xef); // enable all interrupts
 
   // set filter to allow anything
   writeRegister(REG_ACRn(0), 0x00);
