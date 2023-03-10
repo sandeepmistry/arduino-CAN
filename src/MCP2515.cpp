@@ -21,10 +21,11 @@
 #define FLAG_RXnIF(n)              (0x01 << n)
 #define FLAG_TXnIF(n)              (0x04 << n)
 
-#define REG_RXFnSIDH(n)            (0x00 + (n * 4))
-#define REG_RXFnSIDL(n)            (0x01 + (n * 4))
-#define REG_RXFnEID8(n)            (0x02 + (n * 4))
-#define REG_RXFnEID0(n)            (0x03 + (n * 4))
+// There is a 4-register gap between RXF2EID0 and RXF3SIDH.
+#define REG_RXFnSIDH(n)            (0x00 + ((n + (n >= 3)) * 4))
+#define REG_RXFnSIDL(n)            (0x01 + ((n + (n >= 3)) * 4))
+#define REG_RXFnEID8(n)            (0x02 + ((n + (n >= 3)) * 4))
+#define REG_RXFnEID0(n)            (0x03 + ((n + (n >= 3)) * 4))
 
 #define REG_RXMnSIDH(n)            (0x20 + (n * 0x04))
 #define REG_RXMnSIDL(n)            (0x21 + (n * 0x04))
@@ -51,6 +52,7 @@
 #define FLAG_SRR                   0x10
 #define FLAG_RTR                   0x40
 #define FLAG_EXIDE                 0x08
+#define FLAG_RXB0CTRL_BUKT         0x04
 
 #define FLAG_RXM0                  0x20
 #define FLAG_RXM1                  0x40
@@ -288,6 +290,10 @@ int MCP2515Class::filter(int id, int mask)
 
   for (int n = 0; n < 2; n++) {
     // standard only
+    // TODO: This doesn't look correct. According to the datasheet, the RXM0 and
+    // RMX1 should either both be unset (in which case filters are active), or
+    // both be unset (in which case all filters are ignored).
+    // Either way, it's unclear why we write to the same register twice here.
     writeRegister(REG_RXBnCTRL(n), FLAG_RXM0);
     writeRegister(REG_RXBnCTRL(n), FLAG_RXM0);
 
@@ -313,6 +319,55 @@ int MCP2515Class::filter(int id, int mask)
   return 1;
 }
 
+boolean MCP2515Class::setFilterRegisters(
+    uint16_t mask0, uint16_t filter0, uint16_t filter1,
+    uint16_t mask1, uint16_t filter2, uint16_t filter3, uint16_t filter4, uint16_t filter5,
+    bool allowRollover)
+{
+  mask0 &= 0x7ff;
+  filter0 &= 0x7ff;
+  filter1 &= 0x7ff;
+  mask1 &= 0x7ff;
+  filter2 &= 0x7ff;
+  filter3 &= 0x7ff;
+  filter4 &= 0x7ff;
+  filter5 &= 0x7ff;
+
+  // config mode
+  writeRegister(REG_CANCTRL, 0x80);
+  if (readRegister(REG_CANCTRL) != 0x80) {
+    return false;
+  }
+
+  writeRegister(REG_RXBnCTRL(0), allowRollover ? FLAG_RXB0CTRL_BUKT : 0);
+  writeRegister(REG_RXBnCTRL(1), 0);
+  for (int n = 0; n < 2; n++) {
+    uint8_t mask = (n == 0) ? mask0 : mask1;
+    writeRegister(REG_RXMnSIDH(n), mask >> 3);
+    writeRegister(REG_RXMnSIDL(n), mask << 5);
+    writeRegister(REG_RXMnEID8(n), 0);
+    writeRegister(REG_RXMnEID0(n), 0);
+  }
+
+  uint8_t filter_array[6] =
+      {filter0, filter1, filter2, filter3, filter4, filter5};
+  for (int n = 0; n < 6; n++) {
+    uint8_t id = filter_array[n];
+    writeRegister(REG_RXFnSIDH(n), id >> 3);
+    writeRegister(REG_RXFnSIDL(n), id << 5);
+    writeRegister(REG_RXFnEID8(n), 0);
+    writeRegister(REG_RXFnEID0(n), 0);
+  }
+
+  // normal mode
+  writeRegister(REG_CANCTRL, 0x00);
+  if (readRegister(REG_CANCTRL) != 0x00) {
+    return false;
+  }
+
+  return true;
+}
+
 int MCP2515Class::filterExtended(long id, long mask)
 {
   id &= 0x1FFFFFFF;
@@ -326,6 +381,10 @@ int MCP2515Class::filterExtended(long id, long mask)
 
   for (int n = 0; n < 2; n++) {
     // extended only
+    // TODO: This doesn't look correct. According to the datasheet, the RXM0 and
+    // RMX1 should either both be unset (in which case filters are active), or
+    // both be unset (in which case all filters are ignored).
+    // Either way, it's unclear why we write to the same register twice here.
     writeRegister(REG_RXBnCTRL(n), FLAG_RXM1);
     writeRegister(REG_RXBnCTRL(n), FLAG_RXM1);
 
