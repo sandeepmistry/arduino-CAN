@@ -40,6 +40,8 @@ public:
   virtual int filter(int id, int mask);
   using CANControllerClass::filterExtended;
   virtual int filterExtended(long id, long mask);
+  using CANControllerClass::multiFilter;
+  virtual int multiFilter(int *ids, unsigned count);
 
   virtual int observe();
   virtual int loopback();

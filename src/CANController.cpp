@@ -195,6 +195,11 @@ int CANControllerClass::filterExtended(long /*id*/, long /*mask*/)
   return 0;
 }
 
+int CANControllerClass::multiFilter(int * /*ids*/, unsigned /*mask*/)
+{
+  return 0;
+}
+
 int CANControllerClass::observe()
 {
   return 0;
