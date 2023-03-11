@@ -26,6 +26,10 @@ public:
 
   virtual void onReceive(void(*callback)(int));
 
+  uint8_t getRmc() {
+    return readRegister(29);
+  }
+
   using CANControllerClass::filter;
   virtual int filter(int id, int mask);
   using CANControllerClass::filterExtended;
