@@ -433,7 +433,15 @@ void MCP2515Class::reset()
   digitalWrite(_csPin, HIGH);
   SPI.endTransaction();
 
-  delayMicroseconds(10);
+  // From the data sheet:
+  // The OST keeps the device in a Reset state for 128 OSC1 clock cycles after
+  // the occurrence of a Power-on Reset, SPI Reset, after the assertion of the
+  // RESET pin, and after a wake-up from Sleep mode. It should be noted that no
+  // SPI protocol operations should be attempted until after the OST has
+  // expired.
+  // We sleep for 160 cycles to match the old behavior with 16 MHz quartz, and
+  // to be on the safe side for 8 MHz devices.
+  delayMicroseconds(ceil(160 * 1000000.0 / _clockFrequency));
 }
 
 void MCP2515Class::handleInterrupt()
