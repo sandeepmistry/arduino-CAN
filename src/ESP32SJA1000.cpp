@@ -164,13 +164,39 @@ void ESP32SJA1000Class::end()
 
 int ESP32SJA1000Class::endPacket()
 {
+  static int try_count = 0;
+  static bool f_senderr = false;
+
+  if(f_senderr)
+  {
+    if ((readRegister(REG_SR) & 0x08) != 0x08) {
+      try_count++;
+      if(try_count > 5)
+      {
+        f_senderr = false;
+        try_count = 0;
+        return -5;
+      }
+      else
+      {
+        return -1;
+      }
+    }
+    else
+    {
+      f_senderr = false;
+      return 1;
+    }
+  }
+
+
   if (!CANControllerClass::endPacket()) {
     return 0;
   }
 
-  // wait for TX buffer to free
-  while ((readRegister(REG_SR) & 0x04) != 0x04) {
-    yield();
+  if ((readRegister(REG_SR) & 0x04) != 0x04) {
+    // TX buffer not free
+    return -1;
   }
 
   int dataReg;
@@ -203,13 +229,14 @@ int ESP32SJA1000Class::endPacket()
     modifyRegister(REG_CMR, 0x1f, 0x01);
   }
 
-  // wait for TX complete
-  while ((readRegister(REG_SR) & 0x08) != 0x08) {
+  if ((readRegister(REG_SR) & 0x08) != 0x08) {
     if (readRegister(REG_ECC) == 0xd9) {
       modifyRegister(REG_CMR, 0x1f, 0x02); // error, abort
-      return 0;
+      return -2;
     }
-    yield();
+    f_senderr = true;
+    // Transmitting data
+    return -3;
   }
 
   return 1;
