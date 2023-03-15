@@ -1,8 +1,8 @@
-# Arduino CAN
+# Arduino and ESP32 CAN library
 
 [![Build Status](https://travis-ci.org/sandeepmistry/arduino-CAN.svg?branch=master)](https://travis-ci.org/sandeepmistry/arduino-CAN)
 
-An Arduino library for sending and receiving data using CAN bus.
+An library for sending and receiving data using CAN bus, forked from sandeepmistry/arduino-CAN with some improvements on documentation.
 
 ## Compatible Hardware
 
