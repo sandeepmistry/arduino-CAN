@@ -164,19 +164,20 @@ void ESP32SJA1000Class::end()
 
 int ESP32SJA1000Class::endPacket()
 {
-  static int try_count = 0;
-  static bool f_senderr = false;
-  bool f_endPacket = CANControllerClass::endPacket();
+  static bool f_senderr = false;  // 前回のendPacketで送信が完了したか否か
+  bool f_endPacket = CANControllerClass::endPacket(); // 送信パケットがセットされてからendPacketが呼び出されたかどうか
 
+  //前回 送信が完了しなかったとき
   if(f_senderr)
   {
+    // 送信パケットが新たにセットされずに再送処理を実施する場合
     if(!f_endPacket)
     {
       // 再送処理
       if ((readRegister(REG_SR) & 0x08) != 0x08)
       {
         // 2回目以降でもダメならエラー判定
-        return -5;
+        return -2;
       }
       else
       {
@@ -187,7 +188,7 @@ int ESP32SJA1000Class::endPacket()
     }
     else
     {
-      // 新たに送信パケットがセットされた場合は送信シーケンスをはじめからやり直す
+      // 新たに送信パケットがセットされた場合はifを抜けて送信シーケンスをはじめからやり直す
       f_senderr = true;
     }
   }
@@ -238,7 +239,7 @@ int ESP32SJA1000Class::endPacket()
     }
     f_senderr = true;
     // Transmitting data
-    return -3;
+    return -2;
   }
 
   return 1;
