@@ -212,35 +212,57 @@ int MCP2515Class::endPacket()
 
 int MCP2515Class::parsePacket()
 {
+  SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
+  SPI.transfer(0xb0);  // RX STATUS
+  uint8_t rxStatus = SPI.transfer(0x00);
+  digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
+
   int n;
-
-  uint8_t intf = readRegister(REG_CANINTF);
-
-  if (intf & FLAG_RXnIF(0)) {
+  if (rxStatus & 0x40) {
     n = 0;
-  } else if (intf & FLAG_RXnIF(1)) {
+  } else if (rxStatus & 0x80) {
     n = 1;
   } else {
     _rxId = -1;
     _rxExtended = false;
     _rxRtr = false;
+    _rxDlc = 0;
+    _rxIndex = 0;
     _rxLength = 0;
     return 0;
   }
 
-  _rxExtended = (readRegister(REG_RXBnSIDL(n)) & FLAG_IDE) ? true : false;
+  SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
+  // Send READ RX BUFFER instruction to sequentially read registers, starting
+  // from RXBnSIDH(n).
+  SPI.transfer(0b10010000 | (n * 0x04));
+  uint8_t regSIDH = SPI.transfer(0x00);
+  uint8_t regSIDL = SPI.transfer(0x00);
+  _rxExtended = (regSIDL & FLAG_IDE) ? true : false;
 
-  uint32_t idA = ((readRegister(REG_RXBnSIDH(n)) << 3) & 0x07f8) | ((readRegister(REG_RXBnSIDL(n)) >> 5) & 0x07);
+  // We could just skip the extended registers for standard frames, but that
+  // would actually add more overhead, and increase complexity.
+  uint8_t regEID8 = SPI.transfer(0x00);
+  uint8_t regEID0 = SPI.transfer(0x00);
+  uint8_t regDLC = SPI.transfer(0x00);
+  uint32_t idA = (regSIDH << 3) | (regSIDL >> 5);
   if (_rxExtended) {
-    uint32_t idB = (((uint32_t)(readRegister(REG_RXBnSIDL(n)) & 0x03) << 16) & 0x30000) | ((readRegister(REG_RXBnEID8(n)) << 8) & 0xff00) | readRegister(REG_RXBnEID0(n));
+    uint32_t idB =
+        ((uint32_t)(regSIDL & 0x03) << 16)
+        | ((uint32_t)regEID8 << 8)
+        | regEID0;
 
     _rxId = (idA << 18) | idB;
-    _rxRtr = (readRegister(REG_RXBnDLC(n)) & FLAG_RTR) ? true : false;
+    _rxRtr = (regDLC & FLAG_RTR) ? true : false;
   } else {
     _rxId = idA;
-    _rxRtr = (readRegister(REG_RXBnSIDL(n)) & FLAG_SRR) ? true : false;
+    _rxRtr = (regSIDL & FLAG_SRR) ? true : false;
   }
-  _rxDlc = readRegister(REG_RXBnDLC(n)) & 0x0f;
+
+  _rxDlc = regDLC & 0x0f;
   _rxIndex = 0;
 
   if (_rxRtr) {
@@ -248,13 +270,16 @@ int MCP2515Class::parsePacket()
   } else {
     _rxLength = _rxDlc;
 
-    for (int i = 0; i < _rxLength; i++) {
-      _rxData[i] = readRegister(REG_RXBnD0(n) + i);
+    // Get the data.
+    for (uint8_t i = 0; i < _rxLength; i++) {
+      _rxData[i] = SPI.transfer(0x00);
     }
   }
 
-  modifyRegister(REG_CANINTF, FLAG_RXnIF(n), 0x00);
-
+  // Don't need to unset the RXnIF(n) flag as this is done automatically when
+  // setting the CS high after a READ RX BUFFER instruction.
+  digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
   return _rxDlc;
 }
 
