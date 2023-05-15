@@ -121,7 +121,7 @@ int ESP32SJA1000Class::begin(long baudRate)
   }
 
   modifyRegister(REG_BTR1, 0x80, 0x80); // SAM = 1
-  writeRegister(REG_IER, 0xff); // enable all interrupts
+  writeRegister(REG_IER, 0xef); // enable all interrupts
 
   // set filter to allow anything
   writeRegister(REG_ACRn(0), 0x00);
