@@ -6,6 +6,8 @@
 
 #include <Arduino.h>
 
+typedef std::function<void (int available)>recieveCallback;
+
 class CANControllerClass : public Stream {
 
 public:
@@ -32,7 +34,7 @@ public:
   virtual int peek();
   virtual void flush();
 
-  virtual void onReceive(void(*callback)(int));
+  virtual void onReceive(recieveCallback callback);
 
   virtual int filter(int id) { return filter(id, 0x7ff); }
   virtual int filter(int id, int mask);
@@ -49,7 +51,7 @@ protected:
   virtual ~CANControllerClass();
 
 protected:
-  void (*_onReceive)(int);
+  recieveCallback _onReceive;
 
   bool _packetBegun;
   long _txId;

@@ -180,7 +180,7 @@ void CANControllerClass::flush()
 {
 }
 
-void CANControllerClass::onReceive(void(*callback)(int))
+void CANControllerClass::onReceive(recieveCallback callback)
 {
   _onReceive = callback;
 }

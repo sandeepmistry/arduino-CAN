@@ -233,7 +233,7 @@ int ESP32SJA1000Class::parsePacket()
   return _rxDlc;
 }
 
-void ESP32SJA1000Class::onReceive(void(*callback)(int))
+void ESP32SJA1000Class::onReceive(recieveCallback callback)
 {
   CANControllerClass::onReceive(callback);
 
