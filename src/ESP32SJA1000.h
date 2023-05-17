@@ -40,7 +40,7 @@ public:
 
   void dumpRegisters(Stream& out);
 
-private:
+protected:
   void reset();
 
   void handleInterrupt();
@@ -51,7 +51,7 @@ private:
 
   static void onInterrupt(void* arg);
 
-private:
+protected:
   gpio_num_t _rxPin;
   gpio_num_t _txPin;
   bool _loopback;
