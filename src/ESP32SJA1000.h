@@ -40,18 +40,18 @@ public:
 
   void dumpRegisters(Stream& out);
 
-  uint8_t readRegister(uint8_t address);
-  void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
-  void writeRegister(uint8_t address, uint8_t value);
-
-private:
+protected:
   void reset();
 
   void handleInterrupt();
 
   static void onInterrupt(void* arg);
 
-private:
+  uint8_t readRegister(uint8_t address);
+  void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
+  void writeRegister(uint8_t address, uint8_t value);
+
+protected:
   gpio_num_t _rxPin;
   gpio_num_t _txPin;
   bool _loopback;
