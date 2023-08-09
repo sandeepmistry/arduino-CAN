@@ -140,7 +140,7 @@ void ESP32SJA1000Class::end()
 int ESP32SJA1000Class::endPacket()
 {
   if (!CANControllerClass::endPacket()) {
-    return 0;
+    // return 0;
   }
 
   // wait for TX buffer to free
@@ -356,6 +356,12 @@ void ESP32SJA1000Class::handleInterrupt()
     parsePacket();
 
     _onReceive(available());
+  }
+  if (ir & 0x40){
+    // Arbitration lost, resend last packet
+    
+    log_i("Arbitration Lost");
+    endPacket();
   }
 }
 
