@@ -71,6 +71,10 @@ protected:
 
   static void onInterrupt(void* arg);
 
+  uint8_t readRegister(uint8_t address);
+  void modifyRegister(uint8_t address, uint8_t mask, uint8_t value);
+  void writeRegister(uint8_t address, uint8_t value);
+
 protected:
   gpio_num_t _rxPin;
   gpio_num_t _txPin;
