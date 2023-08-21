@@ -297,7 +297,7 @@ int ESP32SJA1000Class::filter(int id, int mask)
 int ESP32SJA1000Class::filterExtended(long id, long mask)
 {
   id &= 0x1FFFFFFF;
-  mask &= ~(mask & 0x1FFFFFFF);
+  mask = ~(mask & 0x1FFFFFFF);
 
   modifyRegister(REG_MOD, 0x17, 0x01); // reset
 
