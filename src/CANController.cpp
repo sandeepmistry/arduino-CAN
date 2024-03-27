@@ -4,7 +4,7 @@
 #include "CANController.h"
 
 CANControllerClass::CANControllerClass() :
-  _onReceive(NULL),
+  _onReceivePointer(NULL),
 
   _packetBegun(false),
   _txId(-1),
@@ -182,7 +182,12 @@ void CANControllerClass::flush()
 
 void CANControllerClass::onReceive(void(*callback)(int))
 {
-  _onReceive = callback;
+  _onReceivePointer = callback;
+}
+
+void CANControllerClass::onReceive(std::function<void(int)> callback)
+{
+  _onReceiveFunction = callback;
 }
 
 int CANControllerClass::filter(int /*id*/, int /*mask*/)
