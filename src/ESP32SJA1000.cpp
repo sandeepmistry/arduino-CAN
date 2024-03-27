@@ -272,6 +272,20 @@ void ESP32SJA1000Class::onReceive(void(*callback)(int))
   }
 }
 
+void ESP32SJA1000Class::onReceive(std::function<void(int)> callback)
+{
+  CANControllerClass::onReceive(callback);
+
+  if (_intrHandle) {
+    esp_intr_free(_intrHandle);
+    _intrHandle = NULL;
+  }
+
+  if (callback) {
+    esp_intr_alloc(ETS_CAN_INTR_SOURCE, 0, ESP32SJA1000Class::onInterrupt, this, &_intrHandle);
+  }
+}
+
 int ESP32SJA1000Class::filter(int id, int mask)
 {
   id &= 0x7ff;
@@ -380,7 +394,12 @@ void ESP32SJA1000Class::handleInterrupt()
     // received packet, parse and call callback
     parsePacket();
 
-    _onReceive(available());
+    if (_onReceivePointer) {
+      _onReceivePointer(available());
+    }
+    if (_onReceiveFunction) {
+      _onReceiveFunction(available());
+    }
   }
 }
 

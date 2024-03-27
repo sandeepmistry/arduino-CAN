@@ -35,6 +35,7 @@ public:
   virtual int parsePacket();
 
   virtual void onReceive(void(*callback)(int));
+  virtual void onReceive(std::function<void(int)> callback);
 
   using CANControllerClass::filter;
   virtual int filter(int id, int mask);
