@@ -91,6 +91,7 @@ int MCP2515Class::begin(long baudRate)
     uint8_t cnf[3];
   } CNF_MAPPER[] = {
     {  (long)8E6, (long)1000E3, { 0x00, 0x80, 0x00 } },
+    {  (long)8E6, (long)666666, { 0xC0, 0xB8, 0x01 } },
     {  (long)8E6,  (long)500E3, { 0x00, 0x90, 0x02 } },
     {  (long)8E6,  (long)250E3, { 0x00, 0xb1, 0x05 } },
     {  (long)8E6,  (long)200E3, { 0x00, 0xb4, 0x06 } },
@@ -104,6 +105,7 @@ int MCP2515Class::begin(long baudRate)
     {  (long)8E6,    (long)5E3, { 0x1f, 0xbf, 0x07 } },
 
     { (long)16E6, (long)1000E3, { 0x00, 0xd0, 0x82 } },
+    { (long)16E6, (long)666666, { 0xC0, 0xF8, 0x81 } },
     { (long)16E6,  (long)500E3, { 0x00, 0xf0, 0x86 } },
     { (long)16E6,  (long)250E3, { 0x41, 0xf1, 0x85 } },
     { (long)16E6,  (long)200E3, { 0x01, 0xfa, 0x87 } },
