@@ -33,6 +33,7 @@ public:
   virtual void flush();
 
   virtual void onReceive(void(*callback)(int));
+  virtual void onReceive(std::function<void(int)> callback);
 
   virtual int filter(int id) { return filter(id, 0x7ff); }
   virtual int filter(int id, int mask);
@@ -49,7 +50,8 @@ protected:
   virtual ~CANControllerClass();
 
 protected:
-  void (*_onReceive)(int);
+  void (*_onReceivePointer)(int);
+  std::function<void(int)> _onReceiveFunction;
 
   bool _packetBegun;
   long _txId;

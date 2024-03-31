@@ -277,6 +277,23 @@ void MCP2515Class::onReceive(void(*callback)(int))
   }
 }
 
+void MCP2515Class::onReceive(std::function<void(int)> callback)
+{
+  CANControllerClass::onReceive(callback);
+
+  pinMode(_intPin, INPUT);
+
+  if (callback) {
+    SPI.usingInterrupt(digitalPinToInterrupt(_intPin));
+    attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, LOW);
+  } else {
+    detachInterrupt(digitalPinToInterrupt(_intPin));
+#ifdef SPI_HAS_NOTUSINGINTERRUPT
+    SPI.notUsingInterrupt(digitalPinToInterrupt(_intPin));
+#endif
+  }
+}
+
 int MCP2515Class::filter(int id, int mask)
 {
   id &= 0x7ff;
@@ -444,8 +461,13 @@ void MCP2515Class::handleInterrupt()
     return;
   }
 
-  while (parsePacket() || _rxId != -1) {
-    _onReceive(available());
+  while (parsePacket()) {
+    if (_onReceivePointer) {
+      _onReceivePointer(available());
+    }
+    if (_onReceiveFunction) {
+      _onReceiveFunction(available());
+    }
   }
 }
 
