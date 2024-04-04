@@ -39,6 +39,8 @@ public:
   virtual int filterExtended(long id) { return filterExtended(id, 0x1fffffff); }
   virtual int filterExtended(long id, long mask);
 
+  virtual int multiFilter(int *ids, unsigned count);
+
   virtual int observe();
   virtual int loopback();
   virtual int sleep();

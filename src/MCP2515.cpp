@@ -21,10 +21,10 @@
 #define FLAG_RXnIF(n)              (0x01 << n)
 #define FLAG_TXnIF(n)              (0x04 << n)
 
-#define REG_RXFnSIDH(n)            (0x00 + (n * 4))
-#define REG_RXFnSIDL(n)            (0x01 + (n * 4))
-#define REG_RXFnEID8(n)            (0x02 + (n * 4))
-#define REG_RXFnEID0(n)            (0x03 + (n * 4))
+#define REG_RXFnSIDH(n)            ((n) < 3 ? (0x00 + (n) * 4) : (0x10 + ((n) - 3) * 4))
+#define REG_RXFnSIDL(n)            ((n) < 3 ? (0x01 + (n) * 4) : (0x11 + ((n) - 3) * 4))
+#define REG_RXFnEID8(n)            ((n) < 3 ? (0x02 + (n) * 4) : (0x12 + ((n) - 3) * 4))
+#define REG_RXFnEID0(n)            ((n) < 3 ? (0x03 + (n) * 4) : (0x13 + ((n) - 3) * 4))
 
 #define REG_RXMnSIDH(n)            (0x20 + (n * 0x04))
 #define REG_RXMnSIDL(n)            (0x21 + (n * 0x04))
@@ -302,6 +302,133 @@ int MCP2515Class::filter(int id, int mask)
   for (int n = 0; n < 6; n++) {
     writeRegister(REG_RXFnSIDH(n), id >> 3);
     writeRegister(REG_RXFnSIDL(n), id << 5);
+    writeRegister(REG_RXFnEID8(n), 0);
+    writeRegister(REG_RXFnEID0(n), 0);
+  }
+
+  // normal mode
+  writeRegister(REG_CANCTRL, 0x00);
+  if (readRegister(REG_CANCTRL) != 0x00) {
+    return 0;
+  }
+
+  return 1;
+}
+
+unsigned char hammingDistance(int x, int y)
+{
+  unsigned char distance = 0;
+  int xorXY = x ^ y;
+
+  for(int i = 0; i < 8 * sizeof(int); i++) {
+    if(xorXY & (1 << i))
+      distance++;
+  }
+
+  return distance;
+}
+
+int MCP2515Class::multiFilter(int *ids, unsigned count)
+{
+  long filterMasks[2];
+  long filterIds[6];
+
+  if(count <= 6) {
+    // the MCP2515 has enough registers to filter all ids
+    for (int n = 0; n < 2; n++)
+      filterMasks[n] = 0x7ff;
+
+    for (int n = 0; n < 6; n++) {
+      if (n < count)
+        filterIds[n] = ids[n];
+      else
+        filterIds[n] = 0;
+    }
+  }
+  else {
+    // we have more ids than filters, we find the two most distant ids and use
+    //  them as base for anding together all other ids
+    unsigned char maxDistance = 0;
+
+    for(int i = 0; i < count; i++) {
+      for(int j = i; j < count; j++) {
+        unsigned char distance = hammingDistance(ids[i], ids[j]);
+
+        if(distance > maxDistance) {
+          filterIds[0] = ids[i];
+          filterIds[2] = ids[j];
+          maxDistance = distance;
+        }
+      }
+    }
+
+    filterMasks[0] = 0x7ff;
+    filterMasks[1] = 0x7ff;
+    filterIds[1] = 0;
+    filterIds[3] = 0;
+    filterIds[4] = 0;
+    filterIds[5] = 0;
+
+    for(int i = 0; i < count; i++) {
+      unsigned char distance0 = hammingDistance(ids[i], filterMasks[0]);
+      unsigned char distance1 = hammingDistance(ids[i], filterMasks[1]);
+
+#if 0
+      Serial.print("id ");
+      Serial.print(ids[i]);
+      Serial.print(" distance0: ");
+      Serial.print(distance0);
+      Serial.print(" distance1: ");
+      Serial.print(distance1);
+      Serial.println();
+#endif
+
+      if(distance0 < distance1) {
+        filterMasks[0] = filterMasks[0] & ~(filterIds[0] ^ ids[i]);
+        filterIds[0] &= ids[i];
+      }
+      else {
+        filterMasks[1] = filterMasks[1] & ~(filterIds[2] ^ ids[i]);
+        filterIds[2] &= ids[i];
+      }
+    }
+
+#if 0
+    Serial.print("filterMasks[0] = ");
+    Serial.print(filterMasks[0], 16);
+    Serial.print(" filterIds[0] = ");
+    Serial.println(filterIds[0], 16);
+
+    Serial.print("filterMasks[1] = ");
+    Serial.print(filterMasks[1], 16);
+    Serial.print(" filterIds[2] = ");
+    Serial.println(filterIds[2], 16);
+#endif
+  }
+
+
+
+  // config mode
+  writeRegister(REG_CANCTRL, 0x80);
+  if (readRegister(REG_CANCTRL) != 0x80) {
+    return 0;
+  }
+
+  for (int n = 0; n < 2; n++) {
+    // for now standard only (TODO: extended)
+    writeRegister(REG_RXBnCTRL(n), FLAG_RXM0);
+    writeRegister(REG_RXBnCTRL(n), FLAG_RXM0);
+
+    writeRegister(REG_RXMnSIDH(n), filterMasks[n] >> 3);
+    writeRegister(REG_RXMnSIDL(n), filterMasks[n] << 5);
+    writeRegister(REG_RXMnEID8(n), 0);
+    writeRegister(REG_RXMnEID0(n), 0);
+  }
+
+  for (int n = 0; n < 6; n++) {
+    writeRegister(REG_RXFnSIDH(n), filterIds[n] >> 3);
+    writeRegister(REG_RXFnSIDL(n), filterIds[n] << 5);
+
     writeRegister(REG_RXFnEID8(n), 0);
     writeRegister(REG_RXFnEID0(n), 0);
   }
