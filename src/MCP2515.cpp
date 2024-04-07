@@ -163,52 +163,91 @@ int MCP2515Class::endPacket()
     return 0;
   }
 
+  // Currently, we don't need to use more than one TX buffer as we always wait
+  // until the data has been fully transmitted. For the same reason, we don't
+  // need to check in the beginning whether there is any data in the TX buffer
+  // pending transmission. The performance can be optimized by utilizing all
+  // three TX buffers of the MCP2515, but this will come at extra complexity.
   int n = 0;
 
+  // Pre-calculate values for all registers so that we can write them
+  // sequentially via the LOAD TX BUFFER instruction.
+  // TX BUFFER
+  uint8_t regSIDH;
+  uint8_t regSIDL;
+  uint8_t regEID8;
+  uint8_t regEID0;
   if (_txExtended) {
-    writeRegister(REG_TXBnSIDH(n), _txId >> 21);
-    writeRegister(REG_TXBnSIDL(n), (((_txId >> 18) & 0x07) << 5) | FLAG_EXIDE | ((_txId >> 16) & 0x03));
-    writeRegister(REG_TXBnEID8(n), (_txId >> 8) & 0xff);
-    writeRegister(REG_TXBnEID0(n), _txId & 0xff);
+    regSIDH = _txId >> 21;
+    regSIDL =
+        (((_txId >> 18) & 0x07) << 5) | FLAG_EXIDE | ((_txId >> 16) & 0x03);
+    regEID8 = (_txId >> 8) & 0xff;
+    regEID0 = _txId & 0xff;
   } else {
-    writeRegister(REG_TXBnSIDH(n), _txId >> 3);
-    writeRegister(REG_TXBnSIDL(n), _txId << 5);
-    writeRegister(REG_TXBnEID8(n), 0x00);
-    writeRegister(REG_TXBnEID0(n), 0x00);
+    regSIDH = _txId >> 3;
+    regSIDL = _txId << 5;
+    regEID8 = 0x00;
+    regEID0 = 0x00;
   }
 
+  uint8_t regDLC;
   if (_txRtr) {
-    writeRegister(REG_TXBnDLC(n), 0x40 | _txLength);
+    regDLC = 0x40 | _txLength;
   } else {
-    writeRegister(REG_TXBnDLC(n), _txLength);
+    regDLC = _txLength;
+  }
 
-    for (int i = 0; i < _txLength; i++) {
-      writeRegister(REG_TXBnD0(n) + i, _txData[i]);
+  SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
+  // Send the LOAD TX BUFFER instruction to sequentially write registers,
+  // starting from TXBnSIDH(n).
+  SPI.transfer(0b01000000 | (n << 1));
+  SPI.transfer(regSIDH);
+  SPI.transfer(regSIDL);
+  SPI.transfer(regEID8);
+  SPI.transfer(regEID0);
+  SPI.transfer(regDLC);
+  if (!_txRtr) {
+    for (uint8_t i = 0; i < _txLength; i++) {
+      SPI.transfer(_txData[i]);
     }
   }
+  digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 
-  writeRegister(REG_TXBnCTRL(n), 0x08);
+  SPI.beginTransaction(_spiSettings);
+  digitalWrite(_csPin, LOW);
+  // Send the RTS instruction, which sets the TXREQ (TXBnCTRL[3]) bit for the
+  // respective buffer, and clears the ABTF, MLOA and TXERR bits.
+  SPI.transfer(0b10000000 | (1 << n));
+  digitalWrite(_csPin, HIGH);
+  SPI.endTransaction();
 
+  // Wait until the transmission completes, or gets aborted.
+  // Transmission is pending while TXREQ (TXBnCTRL[3]) bit is set.
   bool aborted = false;
-
   while (readRegister(REG_TXBnCTRL(n)) & 0x08) {
+    // Read the TXERR (TXBnCTRL[4]) bit to check for errors.
     if (readRegister(REG_TXBnCTRL(n)) & 0x10) {
-      // abort
-      aborted = true;
-
+      // Abort on errors by setting the ABAT bit. The MCP2515 will should the
+      // TXREQ bit shortly. We'll keep running the loop until TXREQ is cleared.
       modifyRegister(REG_CANCTRL, 0x10, 0x10);
+      aborted = true;
     }
 
     yield();
   }
 
   if (aborted) {
-    // clear abort command
+    // Reset the ABAT bit.
     modifyRegister(REG_CANCTRL, 0x10, 0x00);
   }
 
+  // Clear the pending TX interrupt, if any.
   modifyRegister(REG_CANINTF, FLAG_TXnIF(n), 0x00);
 
+  // Report failure if either of the ABTF, MLOA or TXERR bits are set.
+  // TODO: perhaps we can reuse the last value read from this register // earlier?
   return (readRegister(REG_TXBnCTRL(n)) & 0x70) ? 0 : 1;
 }
 
