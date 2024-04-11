@@ -31,6 +31,10 @@ public:
   virtual int read();
   virtual int peek();
   virtual void flush();
+  virtual size_t readBytes(char *buffer, size_t length); // read chars from stream into buffer
+  virtual size_t readBytes(uint8_t *buffer, size_t length) {
+    return readBytes((char*)buffer, length);
+  }
 
   virtual void onReceive(void(*callback)(int));
 
@@ -43,6 +47,9 @@ public:
   virtual int loopback();
   virtual int sleep();
   virtual int wakeup();
+
+  /// Return the raw RX buffer for more efficient data access in high-performance scenarios.
+  uint8_t* getRxBuf() { return _rxData; }
 
 protected:
   CANControllerClass();
