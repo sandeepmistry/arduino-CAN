@@ -375,8 +375,8 @@ int MCP2515Class::loopback()
 
 int MCP2515Class::sleep()
 {
-  writeRegister(REG_CANCTRL, 0x01);
-  if (readRegister(REG_CANCTRL) != 0x01) {
+  writeRegister(REG_CANCTRL, 0x20);
+  if (readRegister(REG_CANCTRL) != 0x20) {
     return 0;
   }
 
