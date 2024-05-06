@@ -6,6 +6,8 @@
 
 #ifdef ARDUINO_ARCH_ESP32
 #include "ESP32SJA1000.h"
+#elif defined(CH32V20x) || defined(CH32V30x)
+#include "CH32.h"
 #else
 #include "MCP2515.h"
 #endif
