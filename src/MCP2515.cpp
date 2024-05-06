@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#ifndef ARDUINO_ARCH_ESP32
+#if !defined(ARDUINO_ARCH_ESP32) && !defined(CH32V20x) && !defined(CH32V30x)
 
 #include "MCP2515.h"
 
